@@ -1,0 +1,135 @@
+###############################################################################
+# Mine
+###############################################################################
+*_x.*
+
+
+
+
+###############################################################################
+# Terraform
+###############################################################################
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files & lock files
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Crash logs
+crash.log
+crash.*.log
+
+# Exclude override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CLI configuration & plan files
+.terraformrc
+terraform.rc
+*.tfplan
+*.tfplan.*
+
+###############################################################################
+# Kubernetes / Helm
+###############################################################################
+# Rendered or downloaded charts
+charts/*/charts/
+charts/*/tmpcharts/
+
+# Helm secrets / values files that may contain secrets
+*secret*.yaml
+*secret*.yml
+*values*.yaml
+*values*.yml
+!example-*values*.yaml
+!example-*values*.yml
+
+# Kustomize build output
+kustomize/**/build/
+
+# Local kubeconfigs (unless explicitly tracked)
+kubeconfig*
+.kube/
+
+###############################################################################
+# Docker
+###############################################################################
+# Build contexts that get auto-generated
+.dockerignore
+docker-compose.override.yml
+
+# Ignore built images / layers (if you ever commit them)
+*.tar
+*.img
+*.docker
+
+###############################################################################
+# Node.js (React / Next.js / TypeScript)
+###############################################################################
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Vercel
+.vercel/
+
+# Storybook
+storybook-static/
+
+# Jest / Coverage
+coverage/
+.nyc_output/
+
+# ESLint & Prettier caches
+.eslintcache
+.prettiercache
+
+###############################################################################
+# OS / Editor
+###############################################################################
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+###############################################################################
+# Logs & Misc
+###############################################################################
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary folders
+tmp/
+temp/
+.tmp/
+.temp/
