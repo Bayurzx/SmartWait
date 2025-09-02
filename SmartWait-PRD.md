@@ -383,8 +383,8 @@ A comprehensive virtual queuing ecosystem that transforms healthcare waiting exp
 ## Technical Architecture
 
 ### System Architecture Overview
-- **Frontend:** React Native mobile apps, React.js web portal
-- **Backend:** Node.js microservices architecture
+- **Frontend:** React Native mobile apps, React.js/NextJS web portal
+- **Backend:** Node.js microservices architecture (TypeScript for Type-safe backend development)
 - **Database:** PostgreSQL for transactional data, Redis for caching
 - **Message Queue:** Apache Kafka for real-time updates
 - **Notification Service:** AWS SNS/SES and third-party SMS providers
