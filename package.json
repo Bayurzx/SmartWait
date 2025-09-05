@@ -1,0 +1,56 @@
+{
+  "name": "smartwait-monorepo",
+  "version": "1.0.0",
+  "description": "SmartWait Healthcare Queue Management System",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\" \"npm run dev:mobile\"",
+    "dev:api": "cd apps/api && npm run dev",
+    "dev:web": "cd apps/web && npm run dev",
+    "dev:mobile": "cd apps/mobile && npm start",
+    "build": "npm run build:api && npm run build:web",
+    "build:api": "cd apps/api && npm run build",
+    "build:web": "cd apps/web && npm run build",
+    "test": "npm run test:api && npm run test:web && npm run test:mobile",
+    "test:api": "cd apps/api && npm test",
+    "test:web": "cd apps/web && npm test",
+    "test:mobile": "cd apps/mobile && npm test",
+    "lint": "npm run lint:api && npm run lint:web && npm run lint:mobile",
+    "lint:api": "cd apps/api && npm run lint",
+    "lint:web": "cd apps/web && npm run lint",
+    "lint:mobile": "cd apps/mobile && npm run lint",
+    "install:all": "npm install && npm run install:api && npm run install:web && npm run install:mobile",
+    "install:api": "cd apps/api && npm install",
+    "install:web": "cd apps/web && npm install",
+    "install:mobile": "cd apps/mobile && npm install",
+    "clean": "npm run clean:api && npm run clean:web && npm run clean:mobile",
+    "clean:api": "cd apps/api && rm -rf node_modules dist",
+    "clean:web": "cd apps/web && rm -rf node_modules .next",
+    "clean:mobile": "cd apps/mobile && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "lerna": "^7.1.4"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/smartwait.git"
+  },
+  "keywords": [
+    "healthcare",
+    "queue-management",
+    "virtual-waiting",
+    "patient-experience",
+    "monorepo"
+  ],
+  "author": "SmartWait Team",
+  "license": "MIT"
+}

@@ -1,135 +1,129 @@
-###############################################################################
-# Mine
-###############################################################################
-*_x.*
-
-
-
-
-###############################################################################
-# Terraform
-###############################################################################
-# Local .terraform directories
-**/.terraform/*
-
-# .tfstate files & lock files
-*.tfstate
-*.tfstate.*
-.terraform.lock.hcl
-
-# Crash logs
-crash.log
-crash.*.log
-
-# Exclude override files
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
-
-# CLI configuration & plan files
-.terraformrc
-terraform.rc
-*.tfplan
-*.tfplan.*
-
-###############################################################################
-# Kubernetes / Helm
-###############################################################################
-# Rendered or downloaded charts
-charts/*/charts/
-charts/*/tmpcharts/
-
-# Helm secrets / values files that may contain secrets
-*secret*.yaml
-*secret*.yml
-*values*.yaml
-*values*.yml
-!example-*values*.yaml
-!example-*values*.yml
-
-# Kustomize build output
-kustomize/**/build/
-
-# Local kubeconfigs (unless explicitly tracked)
-kubeconfig*
-.kube/
-
-###############################################################################
-# Docker
-###############################################################################
-# Build contexts that get auto-generated
-.dockerignore
-docker-compose.override.yml
-
-# Ignore built images / layers (if you ever commit them)
-*.tar
-*.img
-*.docker
-
-###############################################################################
-# Node.js (React / Next.js / TypeScript)
-###############################################################################
 # Dependencies
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-.pnpm-store/
 
-# Build outputs
-.next/
-out/
-dist/
-build/
-*.tsbuildinfo
-
-# Environment files
+# Environment variables
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Vercel
-.vercel/
+# Build outputs
+dist/
+build/
+.next/
+out/
 
-# Storybook
-storybook-static/
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
 
-# Jest / Coverage
+# Coverage directory used by tools like istanbul
 coverage/
-.nyc_output/
+*.lcov
 
-# ESLint & Prettier caches
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
 .eslintcache
-.prettiercache
 
-###############################################################################
-# OS / Editor
-###############################################################################
-.DS_Store
-Thumbs.db
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
 
-# IDEs
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+
+# Gatsby files
+.cache/
+public
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary folders
+tmp/
+temp/
+
+# Editor directories and files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-###############################################################################
-# Logs & Misc
-###############################################################################
-*.log
-logs/
-*.pid
-*.seed
-*.pid.lock
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# Temporary folders
-tmp/
-temp/
-.tmp/
-.temp/
+# Logs
+logs
+*.log
+
+# Database
+*.sqlite
+*.db
+
+# Docker
+.dockerignore
+
+# Expo
+.expo/
+web-build/
+
+# React Native
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+coverage/
+.nyc_output/
+
+# Lerna
+lerna-debug.log*
+
+# Local development
+.local/
