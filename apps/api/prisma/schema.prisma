@@ -1,0 +1,69 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Patient {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @db.VarChar(100)
+  phone     String   @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  queuePositions   QueuePosition[]
+  smsNotifications SmsNotification[]
+
+  @@map("patients")
+}
+
+model QueuePosition {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  patientId            String    @map("patient_id") @db.Uuid
+  position             Int
+  status               String    @default("waiting") @db.VarChar(20) // waiting, called, completed, no_show
+  checkInTime          DateTime  @default(now()) @map("check_in_time")
+  estimatedWaitMinutes Int?      @map("estimated_wait_minutes")
+  calledAt             DateTime? @map("called_at")
+  completedAt          DateTime? @map("completed_at")
+
+  // Relations
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  // Constraints
+  @@map("queue_positions")
+
+  // Note: Partial unique index on `position` where status IN ('waiting', 'called')
+  // is created manually in migration SQL and not represented in Prisma schema
+}
+
+model StaffSession {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  username     String   @db.VarChar(50)
+  sessionToken String   @map("session_token") @db.VarChar(255)
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("staff_sessions")
+}
+
+model SmsNotification {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  patientId   String   @map("patient_id") @db.Uuid
+  phoneNumber String   @map("phone_number") @db.VarChar(20)
+  message     String   @db.Text
+  status      String   @default("pending") @db.VarChar(20) // pending, sent, delivered, failed
+  sentAt      DateTime @default(now()) @map("sent_at")
+  twilioSid   String?  @map("twilio_sid") @db.VarChar(100)
+
+  // Relations
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@map("sms_notifications")
+}
