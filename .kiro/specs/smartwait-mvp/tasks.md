@@ -24,7 +24,12 @@ This implementation plan breaks down the SmartWait MVP into 10 days of focused d
 
 
 
-- [-] Set up PostgreSQL database with complete schema (patients, queue_positions, staff_sessions, sms_notifications)
+- [x] Set up PostgreSQL database with complete schema (patients, queue_positions, staff_sessions, sms_notifications)
+
+
+
+
+
 
 
 

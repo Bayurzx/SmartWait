@@ -54,7 +54,12 @@ The SmartWait MVP uses PostgreSQL with the following tables:
    docker-compose -f docker-compose.dev.yml up -d
    ```
 
-2. Set up the database:
+2. Verify the database setup:
+   ```bash
+   npm run db:verify
+   ```
+
+3. Set up the database:
    ```bash
    npm run db:setup
    ```
@@ -75,6 +80,7 @@ The SmartWait MVP uses PostgreSQL with the following tables:
 
 ## Available Scripts
 
+- `npm run db:verify` - Verify database setup without requiring connection
 - `npm run db:setup` - Complete database setup (generate client, migrate, seed)
 - `npm run migrate` - Run database migrations
 - `npm run db:seed` - Seed database with sample data

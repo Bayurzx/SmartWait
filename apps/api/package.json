@@ -15,6 +15,7 @@
     "db:setup:test": "NODE_ENV=test ts-node scripts/setup-db.ts --environment=test --skip-seed",
     "db:reset": "npx prisma migrate reset --force",
     "db:studio": "npx prisma studio",
+    "db:verify": "ts-node scripts/verify-db-setup.ts",
     "test:db": "npm run db:setup:test && npm test"
   },
   "dependencies": {
