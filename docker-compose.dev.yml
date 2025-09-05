@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: smartwait-postgres-dev
+    environment:
+      POSTGRES_DB: smartwait_dev
+      POSTGRES_USER: smartwait_user
+      POSTGRES_PASSWORD: smartwait_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - smartwait-dev-network
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:6-alpine
+    container_name: smartwait-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - smartwait-dev-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # API Service (Development mode with hot reload)
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: smartwait-api-dev
+    ports:
+      - "3001:3001"
+      - "9229:9229" # Node.js debugger port
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DATABASE_URL=postgresql://smartwait_user:smartwait_password@postgres:5432/smartwait_dev
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=development-jwt-secret-change-in-production
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER:-}
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./apps/api:/app
+      - /app/node_modules
+      - ./packages:/packages
+    networks:
+      - smartwait-dev-network
+    restart: unless-stopped
+    command: npm run dev
+
+  # Web Application (Development mode with hot reload)
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: smartwait-web-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:3001
+      - NEXT_PUBLIC_WS_URL=ws://localhost:3001
+      - WATCHPACK_POLLING=true
+    depends_on:
+      - api
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+      - ./packages:/packages
+    networks:
+      - smartwait-dev-network
+    restart: unless-stopped
+    command: npm run dev
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
+
+networks:
+  smartwait-dev-network:
+    driver: bridge

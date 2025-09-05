@@ -3,18 +3,15 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "noEmit": false,
+    "lib": ["ES2020", "DOM"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@/types/*": ["./src/types/*"],
       "@/services/*": ["./src/services/*"],
-      "@/controllers/*": ["./src/controllers/*"],
-      "@/middleware/*": ["./src/middleware/*"],
-      "@/utils/*": ["./src/utils/*"],
-      "@/models/*": ["./src/models/*"],
-      "@/routes/*": ["./src/routes/*"],
-      "@/config/*": ["./src/config/*"]
+      "@/utils/*": ["./src/utils/*"]
     }
   },
   "include": ["src/**/*"],

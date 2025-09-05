@@ -3,14 +3,12 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "noEmit": false,
+    "lib": ["ES2020"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@/types/*": ["./src/types/*"],
-      "@/utils/*": ["./src/utils/*"],
-      "@/constants/*": ["./src/constants/*"],
-      "@/validators/*": ["./src/validators/*"]
+      "@/utils/*": ["./src/utils/*"]
     }
   },
   "include": ["src/**/*"],
