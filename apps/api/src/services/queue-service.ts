@@ -6,6 +6,7 @@ import {
   PatientCallResult,
   QueueStats 
 } from '../types/queue';
+import { Prisma } from '@prisma/client';
 import Joi from 'joi';
 
 /**
@@ -65,7 +66,7 @@ export class QueueService {
       const estimatedWaitMinutes = this.calculateEstimatedWaitTime(nextPosition);
 
       // Create patient and queue position in a transaction
-        const result = await prisma.$transaction(async (tx: typeof prisma) => {
+        const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         // Create patient record
         const patient = await tx.patient.create({
           data: {
@@ -76,15 +77,17 @@ export class QueueService {
 
         // Create queue position
         const queuePosition = await tx.queuePosition.create({
-          data: {
-            patientId: patient.id,
-            position: nextPosition,
-            estimatedWaitMinutes
-          },
-          include: {
-            patient: true
-          }
-        });
+        data: {
+          patientId: patient.id,
+          position: nextPosition,
+          estimatedWaitMinutes,
+          status: 'waiting',
+          checkInTime: new Date()
+        },
+        include: {
+          patient: true
+        }
+      });
 
         return queuePosition;
       });
@@ -170,7 +173,7 @@ export class QueueService {
         }
       });
 
-      return queue;
+      return queue as QueuePosition[];
     } catch (error) {
       throw new Error('Failed to retrieve queue');
     }
@@ -289,7 +292,12 @@ export class QueueService {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const completedToday = await prisma.queuePosition.findMany({
+        type CompletedQueueEntry = {
+            checkInTime: Date;
+            completedAt: Date | null;
+        };
+
+        const completedToday: CompletedQueueEntry[] = await prisma.queuePosition.findMany({
         where: {
           status: 'completed',
           completedAt: {
@@ -307,8 +315,8 @@ export class QueueService {
 
       if (completedToday.length > 0) {
         const waitTimes = completedToday
-          .filter((p: { checkInTime: Date; completedAt: Date | null }) => p.completedAt)
-          .map((p: { checkInTime: Date; completedAt: Date }) => {
+          .filter((p) => p.completedAt !== null)
+            .map((p) => {
             const waitTime = (p.completedAt!.getTime() - p.checkInTime.getTime()) / (1000 * 60); // minutes
             return waitTime;
           });
