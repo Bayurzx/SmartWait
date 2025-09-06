@@ -1,4 +1,4 @@
-// API Client Export
-export * from './services';
-export * from './types';
-export * from './utils';
+// packages/api-client/src/index.ts
+export * from './services/index';
+export * from './types/index';
+export * from './utils/index';

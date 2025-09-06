@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getDatabaseHealth, getDatabaseStats } from '../utils/database';
+import { getRedisHealth } from '../config/redis';
 
 const router = Router();
 
@@ -8,17 +9,21 @@ const router = Router();
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const dbHealth = await getDatabaseHealth();
+    const [dbHealth, redisHealth] = await Promise.all([
+      getDatabaseHealth(),
+      getRedisHealth(),
+    ]);
     
     const health = {
       status: 'ok',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       database: dbHealth,
+      redis: redisHealth,
       version: process.env.npm_package_version || '1.0.0',
     };
 
-    const statusCode = dbHealth.status === 'healthy' ? 200 : 503;
+    const statusCode = (dbHealth.status === 'healthy' && redisHealth.status === 'healthy') ? 200 : 503;
     res.status(statusCode).json(health);
   } catch (error) {
     res.status(503).json({
@@ -34,9 +39,10 @@ router.get('/', async (req: Request, res: Response) => {
  */
 router.get('/detailed', async (req: Request, res: Response) => {
   try {
-    const [dbHealth, dbStats] = await Promise.all([
+    const [dbHealth, dbStats, redisHealth] = await Promise.all([
       getDatabaseHealth(),
       getDatabaseStats(),
+      getRedisHealth(),
     ]);
 
     const health = {
@@ -48,10 +54,11 @@ router.get('/detailed', async (req: Request, res: Response) => {
         ...dbHealth,
         statistics: dbStats,
       },
+      redis: redisHealth,
       version: process.env.npm_package_version || '1.0.0',
     };
 
-    const statusCode = dbHealth.status === 'healthy' ? 200 : 503;
+    const statusCode = (dbHealth.status === 'healthy' && redisHealth.status === 'healthy') ? 200 : 503;
     res.status(statusCode).json(health);
   } catch (error) {
     res.status(503).json({

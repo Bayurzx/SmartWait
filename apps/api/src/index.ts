@@ -6,8 +6,9 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-// Import database and routes
+// Import database, Redis, and routes
 import { testDatabaseConnection, cleanupExpiredSessions } from './utils/database';
+import { connectRedis, testRedisConnection } from './config/redis';
 import healthRoutes from './routes/health';
 
 const app = express();
@@ -44,15 +45,25 @@ app.get('/', (_req, res) => {
   });
 });
 
-// Initialize database and start server
+// Initialize database, Redis, and start server
 async function startServer() {
   try {
     // Test database connection
     console.log('🔌 Testing database connection...');
-    const isConnected = await testDatabaseConnection();
+    const isDatabaseConnected = await testDatabaseConnection();
     
-    if (!isConnected) {
+    if (!isDatabaseConnected) {
       console.error('❌ Failed to connect to database. Please check your DATABASE_URL.');
+      process.exit(1);
+    }
+
+    // Connect to Redis
+    console.log('🔌 Connecting to Redis...');
+    await connectRedis();
+    
+    const isRedisConnected = await testRedisConnection();
+    if (!isRedisConnected) {
+      console.error('❌ Failed to connect to Redis. Please check your REDIS_URL.');
       process.exit(1);
     }
 
@@ -65,6 +76,7 @@ async function startServer() {
       console.log(`📊 Health check available at http://localhost:${PORT}/health`);
       console.log(`📊 Detailed health check at http://localhost:${PORT}/health/detailed`);
       console.log(`🗄️  Database: Connected and ready`);
+      console.log(`🔄 Redis: Connected and ready`);
     });
 
   } catch (error) {
@@ -75,11 +87,5 @@ async function startServer() {
 
 // Start the server
 startServer();
-
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 SmartWait API server running on port ${PORT}`);
-  console.log(`📊 Health check available at http://localhost:${PORT}/health`);
-});
 
 export default app;
