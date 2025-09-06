@@ -173,8 +173,13 @@ export class QueueService {
       
       if (queuePosition.status === 'waiting') {
         // Get current position in queue (may have changed due to other patients being processed)
-        const currentPosition = await this.getCurrentPosition(queuePosition.id);
-        currentEstimatedWait = this.calculateEstimatedWaitTime(currentPosition);
+        try {
+          const currentPosition = await this.getCurrentPosition(queuePosition.id);
+          currentEstimatedWait = this.calculateEstimatedWaitTime(currentPosition);
+        } catch (error) {
+          // If we can't get current position, use the stored estimated wait time
+          currentEstimatedWait = queuePosition.estimatedWaitMinutes || 0;
+        }
       }
 
       // Use the helper method to cast the status to the proper union type

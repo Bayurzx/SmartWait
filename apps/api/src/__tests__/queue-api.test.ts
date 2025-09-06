@@ -1,21 +1,31 @@
 import request from 'supertest';
 
+// Create a properly typed mock for Prisma
+const mockPrisma = {
+  queuePosition: {
+    findFirst: jest.fn(),
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    count: jest.fn(),
+    delete: jest.fn(),
+    deleteMany: jest.fn(),
+  },
+  patient: {
+    create: jest.fn(),
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+  },
+  $transaction: jest.fn(),
+};
+
 // Mock the database and Redis connections for testing
 jest.mock('../config/database', () => ({
-  prisma: {
-    queuePosition: {
-      findFirst: jest.fn(),
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      count: jest.fn(),
-    },
-    patient: {
-      create: jest.fn(),
-    },
-    $transaction: jest.fn(),
-  },
+  prisma: mockPrisma,
 }));
 
 jest.mock('../config/redis', () => ({
@@ -30,9 +40,6 @@ jest.mock('../utils/database', () => ({
 
 // Import app after mocking
 import app from '../index';
-import { prisma } from '../config/database';
-
-const mockPrisma = prisma as jest.Mocked<typeof prisma>;
 
 describe('Queue API Endpoints', () => {
   beforeEach(() => {
@@ -43,7 +50,7 @@ describe('Queue API Endpoints', () => {
     it('should successfully check in a new patient', async () => {
       // Mock no existing patient
       mockPrisma.queuePosition.findFirst.mockResolvedValue(null);
-      
+
       // Mock transaction for creating patient and queue position
       const mockQueuePosition = {
         id: 'queue-1',
