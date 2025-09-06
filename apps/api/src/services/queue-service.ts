@@ -9,6 +9,23 @@ import {
 import { Prisma } from '@prisma/client';
 import Joi from 'joi';
 
+type PrismaQueuePosition = {
+    id: string;
+    patientId: string;
+    patient: {
+        id: string;
+        name: string;
+        phone: string;
+        createdAt: Date;
+    };
+    position: number;
+    status: string;
+    checkInTime: Date;
+    estimatedWaitMinutes: number | null;
+    calledAt: Date | null;
+    completedAt: Date | null;
+};
+
 /**
  * Core queue management service for SmartWait
  * Handles patient check-in, position tracking, and queue operations
@@ -24,6 +41,28 @@ export class QueueService {
     phone: Joi.string().trim().pattern(/^\+?[\d\s\-\(\)]+$/).min(10).max(20).required(),
     appointmentTime: Joi.string().trim().min(1).max(50).required()
   });
+
+  /**
+   * Helper to safely cast status string to union type
+   * This is needed because Prisma returns strings but we want strict union types
+   */
+  private castQueueStatus(status: string): 'waiting' | 'called' | 'completed' | 'no_show' {
+    if (status === 'waiting' || status === 'called' || status === 'completed' || status === 'no_show') {
+      return status;
+    }
+    throw new Error(`Invalid queue status: ${status}`);
+  }
+
+  /**
+   * Helper to cast Prisma result to QueuePosition with proper status type
+   * This ensures type safety when returning data from Prisma operations
+   */
+    private castToQueuePosition(data: PrismaQueuePosition): QueuePosition {
+    return {
+      ...data,
+      status: this.castQueueStatus(data.status)
+    };
+  }
 
   /**
    * Check in a patient to the queue
@@ -66,7 +105,8 @@ export class QueueService {
       const estimatedWaitMinutes = this.calculateEstimatedWaitTime(nextPosition);
 
       // Create patient and queue position in a transaction
-        const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Using Prisma.TransactionClient ensures proper typing for the transaction
+      const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         // Create patient record
         const patient = await tx.patient.create({
           data: {
@@ -75,24 +115,25 @@ export class QueueService {
           }
         });
 
-        // Create queue position
+        // Create queue position with all required fields including status and checkInTime
         const queuePosition = await tx.queuePosition.create({
-        data: {
-          patientId: patient.id,
-          position: nextPosition,
-          estimatedWaitMinutes,
-          status: 'waiting',
-          checkInTime: new Date()
-        },
-        include: {
-          patient: true
-        }
-      });
+          data: {
+            patientId: patient.id,
+            position: nextPosition,
+            estimatedWaitMinutes,
+            status: 'waiting', // Explicitly set status
+            checkInTime: new Date() // Explicitly set check-in time
+          },
+          include: {
+            patient: true
+          }
+        });
 
         return queuePosition;
       });
 
-      return result;
+      // Cast the result to ensure proper typing since Prisma returns string status
+      return this.castToQueuePosition(result);
     } catch (error) {
       if (error instanceof Error) {
         throw error;
@@ -136,10 +177,11 @@ export class QueueService {
         currentEstimatedWait = this.calculateEstimatedWaitTime(currentPosition);
       }
 
+      // Use the helper method to cast the status to the proper union type
       return {
         patientId: queuePosition.patientId,
         position: queuePosition.position,
-        status: queuePosition.status as 'waiting' | 'called' | 'completed' | 'no_show',
+        status: this.castQueueStatus(queuePosition.status), // Use helper instead of type assertion
         estimatedWaitMinutes: currentEstimatedWait,
         checkInTime: queuePosition.checkInTime,
         calledAt: queuePosition.calledAt || undefined,
@@ -173,7 +215,8 @@ export class QueueService {
         }
       });
 
-      return queue as QueuePosition[];
+      // Map each item using the casting helper to ensure proper status types
+      return queue.map((item: PrismaQueuePosition) => this.castToQueuePosition(item));
     } catch (error) {
       throw new Error('Failed to retrieve queue');
     }
@@ -292,16 +335,18 @@ export class QueueService {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-        type CompletedQueueEntry = {
-            checkInTime: Date;
-            completedAt: Date | null;
-        };
+      // Type for the completed queue entries we're querying
+      type CompletedQueueEntry = {
+        checkInTime: Date;
+        completedAt: Date | null;
+      };
 
-        const completedToday: CompletedQueueEntry[] = await prisma.queuePosition.findMany({
+      const completedToday: CompletedQueueEntry[] = await prisma.queuePosition.findMany({
         where: {
           status: 'completed',
           completedAt: {
-            gte: today
+            gte: today,
+            not: null // Ensure we only get entries with completedAt set
           }
         },
         select: {
@@ -314,15 +359,18 @@ export class QueueService {
       let longestWaitTime = 0;
 
       if (completedToday.length > 0) {
-        const waitTimes = completedToday
-          .filter((p) => p.completedAt !== null)
-            .map((p) => {
-            const waitTime = (p.completedAt!.getTime() - p.checkInTime.getTime()) / (1000 * 60); // minutes
+        // Type guard to ensure we only process entries with completedAt
+        const validEntries = completedToday.filter((p): p is { checkInTime: Date; completedAt: Date } => 
+          p.completedAt !== null
+        );
+
+        if (validEntries.length > 0) {
+          const waitTimes = validEntries.map((p) => {
+            const waitTime = (p.completedAt.getTime() - p.checkInTime.getTime()) / (1000 * 60); // minutes
             return waitTime;
           });
 
-        if (waitTimes.length > 0) {
-          averageWaitTime = waitTimes.reduce((sum: number, time: number) => sum + time, 0) / waitTimes.length;
+          averageWaitTime = waitTimes.reduce((sum, time) => sum + time, 0) / waitTimes.length;
           longestWaitTime = Math.max(...waitTimes);
         }
       }

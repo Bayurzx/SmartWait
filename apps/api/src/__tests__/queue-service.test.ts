@@ -195,7 +195,13 @@ describe('QueueService', () => {
                 }
             };
 
-            mockPrisma.queuePosition.findFirst.mockResolvedValue(mockQueuePosition as any);
+            // Mock the initial findFirst call
+            mockPrisma.queuePosition.findFirst.mockResolvedValue(mockQueuePosition);
+
+            // Mock the findUnique call that getCurrentPosition makes
+            mockPrisma.queuePosition.findUnique.mockResolvedValue(mockQueuePosition);
+
+            // Mock the count call for patients ahead
             mockPrisma.queuePosition.count.mockResolvedValue(1); // 1 patient ahead
 
             const result = await queueService.getPosition('patient-1');
@@ -354,44 +360,20 @@ describe('QueueService', () => {
                 .mockResolvedValueOnce(1) // called
                 .mockResolvedValueOnce(5); // completed
 
-            // Mock completed patients for wait time calculation
-            const completedPatients: QueuePosition[] = [
+            // Mock completed patients for wait time calculation - use the correct structure
+            const completedPatients = [
                 {
-                    id: '1',
-                    patientId: '1',
-                    position: 1,
-                    status: 'completed',
                     checkInTime: new Date(Date.now() - 30 * 60 * 1000),
-                    estimatedWaitMinutes: 15,
-                    calledAt: new Date(),
-                    completedAt: new Date(),
-                    patient: {
-                        id: '1',
-                        name: 'Test',
-                        phone: '+111',
-                        createdAt: new Date()
-                    }
+                    completedAt: new Date()
                 },
                 {
-                    id: '2',
-                    patientId: '2',
-                    position: 2,
-                    status: 'completed',
                     checkInTime: new Date(Date.now() - 45 * 60 * 1000),
-                    estimatedWaitMinutes: 15,
-                    calledAt: new Date(),
-                    completedAt: new Date(),
-                    patient: {
-                        id: '2',
-                        name: 'Test 2',
-                        phone: '+222',
-                        createdAt: new Date()
-                    }
+                    completedAt: new Date()
                 }
             ];
 
-            mockPrisma.queuePosition.findMany.mockResolvedValue(completedPatients);
-            mockPrisma.queuePosition.findMany.mockResolvedValue(completedPatients as any);
+            // Mock the findMany call for completed patients
+            mockPrisma.queuePosition.findMany.mockResolvedValueOnce(completedPatients);
 
             const result = await queueService.getQueueStats();
 

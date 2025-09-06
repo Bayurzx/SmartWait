@@ -10,6 +10,8 @@ dotenv.config();
 import { testDatabaseConnection, cleanupExpiredSessions } from './utils/database';
 import { connectRedis, testRedisConnection } from './config/redis';
 import healthRoutes from './routes/health';
+import queueRoutes from './routes/queue';
+import staffRoutes from './routes/staff';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -27,6 +29,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/health', healthRoutes);
+app.use('/api', queueRoutes);
+app.use('/api/staff', staffRoutes);
 
 // Basic route
 app.get('/', (_req, res) => {

@@ -27,7 +27,7 @@ export interface QueuePosition {
     createdAt: Date;
   };
   position: number;
-  status: string; // Changed from specific union type to string
+  status: 'waiting' | 'called' | 'completed' | 'no_show';
   checkInTime: Date;
   estimatedWaitMinutes: number | null;
   calledAt: Date | null;
@@ -37,7 +37,7 @@ export interface QueuePosition {
 export interface QueueStatus {
   patientId: string;
   position: number;
-  status: string; // Changed from specific union type to string
+  status: 'waiting' | 'called' | 'completed' | 'no_show';
   estimatedWaitMinutes: number;
   checkInTime: Date;
   calledAt?: Date;
