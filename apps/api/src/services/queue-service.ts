@@ -37,9 +37,25 @@ export class QueueService {
    * Validation schema for check-in data
    */
   private static checkInSchema = Joi.object({
-    name: Joi.string().trim().min(1).max(100).required(),
-    phone: Joi.string().trim().pattern(/^\+?[\d\s\-\(\)]+$/).min(10).max(20).required(),
-    appointmentTime: Joi.string().trim().min(1).max(50).required()
+    name: Joi.string().trim().min(1).max(100).required().messages({
+      'string.empty': 'Name is required',
+      'string.min': 'Name must be at least 1 character long',
+      'string.max': 'Name must be no more than 100 characters long',
+      'any.required': 'Name is required'
+    }),
+    phone: Joi.string().trim().pattern(/^\+?[\d\s\-\(\)]+$/).min(10).max(20).required().messages({
+      'string.empty': 'Phone number is required',
+      'string.pattern.base': 'Phone number must contain only digits, spaces, hyphens, parentheses, and optional + prefix',
+      'string.min': 'Phone number must be at least 10 characters long',
+      'string.max': 'Phone number must be no more than 20 characters long',
+      'any.required': 'Phone number is required'
+    }),
+    appointmentTime: Joi.string().trim().min(1).max(50).required().messages({
+      'string.empty': 'Appointment time is required',
+      'string.min': 'Appointment time must be at least 1 character long',
+      'string.max': 'Appointment time must be no more than 50 characters long',
+      'any.required': 'Appointment time is required'
+    })
   });
 
   /**

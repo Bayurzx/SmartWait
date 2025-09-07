@@ -108,10 +108,12 @@ CREATE TABLE queue_positions (
 
 
 
-- [ ] Implement basic wait time estimation (position × 15 minutes average)
-- [ ] Add input validation for patient data (name, phone, appointment time)
-- [ ] Create error handling for duplicate check-ins and invalid data
-- [ ] Write unit tests for queue service core logic
+- [x] Confirm the following: Implement basic wait time estimation (position × 15 minutes average); Add input validation for patient data (name, phone, appointment time); Create error handling for duplicate check-ins and invalid data; Write unit tests for queue service core logic
+
+
+
+
+
 
 **Technical Implementation:**
 ```typescript
@@ -152,7 +154,12 @@ export class QueueService {
 **Description:** Build staff-facing API endpoints for queue management and basic authentication.
 
 **Acceptance Criteria:**
-- [ ] Create staff authentication system with simple username/password
+- [x] Create staff authentication system with simple username/password
+
+
+
+
+
 - [ ] Implement POST /api/staff/login endpoint with session token generation
 - [ ] Implement GET /api/staff/queue endpoint to retrieve full queue
 - [ ] Implement POST /api/staff/call-next endpoint to call next patient

@@ -5,7 +5,7 @@
 
 import { QueueService } from '../services/queue-service';
 import { prisma } from '../config/database';
-import { CheckInRequest } from '../types/queue';
+import { CheckInRequest, QueuePosition } from '../types/queue';
 
 describe('Automatic Position Assignment Logic', () => {
     let queueService: QueueService;
@@ -51,7 +51,7 @@ describe('Automatic Position Assignment Logic', () => {
                 { name: 'Bob Johnson', phone: '+3333333333', appointmentTime: '2:30 PM' }
             ];
 
-            const results = [];
+            const results: QueuePosition[] = [];
             for (const patient of patients) {
                 const result = await queueService.checkIn(patient);
                 results.push(result);
@@ -92,7 +92,7 @@ describe('Automatic Position Assignment Logic', () => {
             await queueService.markPatientCompleted(patient1.patientId);
 
             // Check that remaining patients have been repositioned
-            const queue = await queueService.getQueue();
+            const queue: QueuePosition[] = await queueService.getQueue();
 
             // Should only have 2 patients left
             expect(queue.length).toBe(2);
@@ -130,7 +130,7 @@ describe('Automatic Position Assignment Logic', () => {
             }
 
             // Verify the database constraint is working by checking the final queue state
-            const queue = await queueService.getQueue();
+            const queue: QueuePosition[] = await queueService.getQueue();
             const queuePositions = queue.map(p => p.position).sort();
             const uniqueQueuePositions = [...new Set(queuePositions)];
             expect(uniqueQueuePositions.length).toBe(queuePositions.length);
@@ -163,7 +163,7 @@ describe('Automatic Position Assignment Logic', () => {
 
         it('should calculate correct positions after calling and completing patients', async () => {
             // Add 4 patients
-            const patients = [];
+            const patients: QueuePosition[] = [];
             for (let i = 1; i <= 4; i++) {
                 const patient = await queueService.checkIn({
                     name: `Patient ${i}`,
@@ -182,7 +182,7 @@ describe('Automatic Position Assignment Logic', () => {
             await queueService.markPatientCompleted(patients[0].patientId);
 
             // Check the queue - should have 3 patients with positions 1, 2, 3
-            const queue = await queueService.getQueue();
+            const queue: QueuePosition[] = await queueService.getQueue();
             expect(queue.length).toBe(3);
 
             const positions = queue.map(p => p.position).sort();

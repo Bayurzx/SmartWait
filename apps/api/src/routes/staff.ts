@@ -1,49 +1,22 @@
 import express from 'express';
 import { QueueService } from '../services/queue-service';
+import { AuthService } from '../services/auth-service';
+import { authenticateStaff, requireAdmin } from '../middleware/auth';
+import { LoginRequest } from '../types/auth';
 
 const router = express.Router();
 const queueService = new QueueService();
-
-// Simple authentication middleware (basic implementation for MVP)
-const authenticateStaff = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const authHeader = req.headers.authorization;
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({
-      success: false,
-      error: {
-        code: 'UNAUTHORIZED',
-        message: 'Authentication required'
-      }
-    });
-  }
-  
-  // For MVP, we'll use a simple token check
-  // In production, this should validate JWT tokens properly
-  const token = authHeader.substring(7);
-  if (!token || token.length < 10) {
-    return res.status(401).json({
-      success: false,
-      error: {
-        code: 'INVALID_TOKEN',
-        message: 'Invalid authentication token'
-      }
-    });
-  }
-  
-  // Add user info to request (simplified for MVP)
-  (req as any).user = { id: 'staff-1', username: 'staff', role: 'staff' };
-  next();
-};
+const authService = new AuthService();
 
 /**
  * POST /api/staff/login
- * Simple staff authentication (MVP implementation)
+ * Staff authentication with username and password
  */
 router.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password }: LoginRequest = req.body;
     
+    // Validate input
     if (!username || !password) {
       return res.status(400).json({
         success: false,
@@ -53,32 +26,21 @@ router.post('/login', async (req, res) => {
         }
       });
     }
+
+    // Authenticate user
+    const authResult = await authService.authenticateStaff(username, password);
     
-    // Simple hardcoded credentials for MVP
-    // In production, this should check against a proper user database
-    if (username === 'staff' && password === 'smartwait2024') {
-      const sessionToken = `staff_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+    if (authResult.success && authResult.data) {
       res.json({
         success: true,
-        data: {
-          token: sessionToken,
-          user: {
-            id: 'staff-1',
-            username: 'staff',
-            role: 'staff'
-          },
-          expiresIn: '8h'
-        },
+        data: authResult.data,
         message: 'Login successful'
       });
     } else {
-      res.status(401).json({
+      const statusCode = authResult.error?.code === 'VALIDATION_ERROR' ? 400 : 401;
+      res.status(statusCode).json({
         success: false,
-        error: {
-          code: 'INVALID_CREDENTIALS',
-          message: 'Invalid username or password'
-        }
+        error: authResult.error
       });
     }
   } catch (error) {
@@ -89,6 +51,80 @@ router.post('/login', async (req, res) => {
       error: {
         code: 'INTERNAL_ERROR',
         message: 'Login failed'
+      }
+    });
+  }
+});
+
+/**
+ * POST /api/staff/logout
+ * Logout staff member and invalidate session
+ */
+router.post('/logout', authenticateStaff, async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.substring(7); // Remove 'Bearer ' prefix
+    
+    if (token) {
+      const logoutSuccess = await authService.logout(token);
+      
+      if (logoutSuccess) {
+        res.json({
+          success: true,
+          message: 'Logout successful'
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          error: {
+            code: 'LOGOUT_FAILED',
+            message: 'Failed to logout'
+          }
+        });
+      }
+    } else {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_TOKEN',
+          message: 'No valid token provided'
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Staff logout error:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Logout failed'
+      }
+    });
+  }
+});
+
+/**
+ * GET /api/staff/me
+ * Get current user information
+ */
+router.get('/me', authenticateStaff, async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: {
+        user: req.user,
+        sessionId: req.sessionId
+      }
+    });
+  } catch (error) {
+    console.error('Get current user error:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to get user information'
       }
     });
   }
@@ -218,6 +254,61 @@ router.get('/stats', authenticateStaff, async (req, res) => {
       error: {
         code: 'INTERNAL_ERROR',
         message: 'Failed to retrieve statistics'
+      }
+    });
+  }
+});
+
+/**
+ * GET /api/staff/sessions
+ * Get active staff sessions (admin only)
+ */
+router.get('/sessions', authenticateStaff, requireAdmin, async (req, res) => {
+  try {
+    const activeSessions = await authService.getActiveSessions();
+    
+    res.json({
+      success: true,
+      data: activeSessions,
+      count: activeSessions.length,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Get active sessions error:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to retrieve active sessions'
+      }
+    });
+  }
+});
+
+/**
+ * POST /api/staff/cleanup-sessions
+ * Clean up expired sessions (admin only)
+ */
+router.post('/cleanup-sessions', authenticateStaff, requireAdmin, async (req, res) => {
+  try {
+    const cleanedCount = await authService.cleanupExpiredSessions();
+    
+    res.json({
+      success: true,
+      data: {
+        cleanedSessions: cleanedCount
+      },
+      message: `Cleaned up ${cleanedCount} expired sessions`
+    });
+  } catch (error) {
+    console.error('Cleanup sessions error:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Failed to cleanup expired sessions'
       }
     });
   }
