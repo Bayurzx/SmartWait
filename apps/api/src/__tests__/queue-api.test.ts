@@ -1,6 +1,7 @@
 import request from 'supertest';
+import { Request, Response } from 'express';
 
-// Create a properly typed mock for Prisma
+// Create a simple mock without complex type references
 const mockPrisma = {
   queuePosition: {
     findFirst: jest.fn(),
@@ -38,16 +39,12 @@ jest.mock('../utils/database', () => ({
   cleanupExpiredSessions: jest.fn().mockResolvedValue(0)
 }));
 
-// ✅ Updated: Import the app creation function instead of the default export
-import { createApp } from '../index';
+// Import app after mocking
+import app from '../index';
 
 describe('Queue API Endpoints', () => {
-  let app: Express.Application;
-
   beforeEach(() => {
     jest.clearAllMocks();
-    // ✅ Updated: Create a fresh app instance for each test
-    app = createApp();
   });
 
   describe('POST /api/checkin', () => {
@@ -61,7 +58,7 @@ describe('Queue API Endpoints', () => {
         patientId: 'patient-1',
         position: 1,
         status: 'waiting',
-        checkInTime: new Date().toISOString(), // ✅ Updated to ISO string
+        checkInTime: new Date().toISOString(),
         estimatedWaitMinutes: 0,
         calledAt: null,
         completedAt: null,
@@ -69,7 +66,7 @@ describe('Queue API Endpoints', () => {
           id: 'patient-1',
           name: 'John Doe',
           phone: '+1234567890',
-          createdAt: new Date().toISOString() // ✅ Updated to ISO string
+          createdAt: new Date().toISOString()
         }
       };
 
@@ -80,7 +77,7 @@ describe('Queue API Endpoints', () => {
               id: 'patient-1',
               name: 'John Doe',
               phone: '+1234567890',
-              createdAt: new Date().toISOString() // ✅ Updated to ISO string
+              createdAt: new Date().toISOString()
             })
           },
           queuePosition: {
@@ -104,7 +101,6 @@ describe('Queue API Endpoints', () => {
       expect(response.body.data.estimatedWait).toBe(0);
     });
 
-    // ✅ No changes to remaining POST tests
     it('should return validation error for invalid input', async () => {
       const response = await request(app)
         .post('/api/checkin')
@@ -120,6 +116,7 @@ describe('Queue API Endpoints', () => {
     });
 
     it('should return error for duplicate phone number', async () => {
+      // Mock existing patient
       mockPrisma.queuePosition.findFirst.mockResolvedValue({
         id: 'existing-queue-1',
         patientId: 'existing-patient-1',
@@ -147,14 +144,13 @@ describe('Queue API Endpoints', () => {
   });
 
   describe('GET /api/position/:id', () => {
-    // ✅ No changes needed
     it('should return patient position', async () => {
       const mockQueuePosition = {
         id: 'queue-1',
         patientId: 'patient-1',
         position: 2,
         status: 'waiting',
-        checkInTime: new Date(),
+        checkInTime: new Date().toISOString(),
         estimatedWaitMinutes: 15,
         calledAt: null,
         completedAt: null,
@@ -162,7 +158,7 @@ describe('Queue API Endpoints', () => {
           id: 'patient-1',
           name: 'John Doe',
           phone: '+1234567890',
-          createdAt: new Date()
+          createdAt: new Date().toISOString()
         }
       };
 
@@ -210,7 +206,7 @@ describe('Queue API Endpoints', () => {
             id: 'patient-1',
             name: 'John Doe',
             phone: '+1111111111',
-            createdAt: new Date().toISOString() // ✅ Updated to ISO string
+            createdAt: new Date().toISOString()
           }
         },
         {
@@ -222,7 +218,7 @@ describe('Queue API Endpoints', () => {
             id: 'patient-2',
             name: 'Jane Doe',
             phone: '+2222222222',
-            createdAt: new Date().toISOString() // ✅ Updated to ISO string
+            createdAt: new Date().toISOString()
           }
         }
       ];
@@ -240,7 +236,6 @@ describe('Queue API Endpoints', () => {
   });
 
   describe('GET /api/queue/stats', () => {
-    // ✅ No changes needed
     it('should return queue statistics', async () => {
       mockPrisma.queuePosition.count
         .mockResolvedValueOnce(3) // waiting
@@ -259,4 +254,8 @@ describe('Queue API Endpoints', () => {
       expect(response.body.data.totalCompleted).toBe(5);
     });
   });
+});
+
+afterAll(() => {
+  jest.restoreAllMocks();
 });

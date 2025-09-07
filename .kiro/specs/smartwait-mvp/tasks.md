@@ -90,13 +90,24 @@ CREATE TABLE queue_positions (
 **Description:** Implement the core queue management service with patient check-in and position tracking.
 
 **Acceptance Criteria:**
-- [-] Create QueueService class with check-in, position tracking, and queue management methods
+- [x] Create QueueService class with check-in, position tracking, and queue management methods
 
 
 
-- [ ] Implement POST /api/checkin endpoint with input validation
-- [ ] Implement GET /api/position/:id endpoint for position queries
-- [ ] Create automatic position assignment logic (sequential numbering)
+
+
+- [x] Implement POST /api/checkin endpoint with input validation and GET /api/position/:id endpoint for position queries
+
+
+
+
+
+- [x] Create automatic position assignment logic (sequential numbering)
+
+
+
+
+
 - [ ] Implement basic wait time estimation (position × 15 minutes average)
 - [ ] Add input validation for patient data (name, phone, appointment time)
 - [ ] Create error handling for duplicate check-ins and invalid data
