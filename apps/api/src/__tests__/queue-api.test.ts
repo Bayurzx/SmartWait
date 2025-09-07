@@ -21,6 +21,18 @@ const mockPrisma = {
     update: jest.fn(),
     delete: jest.fn(),
   },
+  staffSession: {
+    findFirst: jest.fn().mockResolvedValue({
+      id: 'session-1',
+      username: 'staff',
+      sessionToken: 'valid-token',
+      expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000),
+      createdAt: new Date(),
+    }),
+    create: jest.fn(),
+    deleteMany: jest.fn(),
+    findMany: jest.fn(),
+  },
   $transaction: jest.fn(),
 };
 
@@ -195,7 +207,7 @@ describe('Queue API Endpoints', () => {
   });
 
   describe('GET /api/queue', () => {
-    it('should return the full queue', async () => {
+    it('should return the full queue with valid authentication', async () => {
       const mockQueue = [
         {
           id: 'queue-1',
@@ -226,17 +238,27 @@ describe('Queue API Endpoints', () => {
       mockPrisma.queuePosition.findMany.mockResolvedValue(mockQueue as any);
 
       const response = await request(app)
-        .get('/api/queue');
+        .get('/api/queue')
+        .set('Authorization', 'Bearer valid-token');
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data).toEqual(mockQueue);
       expect(response.body.count).toBe(2);
     });
+
+    it('should reject request without authentication', async () => {
+      const response = await request(app)
+        .get('/api/queue');
+
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
+      expect(response.body.error.code).toBe('UNAUTHORIZED');
+    });
   });
 
   describe('GET /api/queue/stats', () => {
-    it('should return queue statistics', async () => {
+    it('should return queue statistics with valid authentication', async () => {
       mockPrisma.queuePosition.count
         .mockResolvedValueOnce(3) // waiting
         .mockResolvedValueOnce(1) // called
@@ -245,13 +267,23 @@ describe('Queue API Endpoints', () => {
       mockPrisma.queuePosition.findMany.mockResolvedValue([]);
 
       const response = await request(app)
-        .get('/api/queue/stats');
+        .get('/api/queue/stats')
+        .set('Authorization', 'Bearer valid-token');
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data.totalWaiting).toBe(3);
       expect(response.body.data.totalCalled).toBe(1);
       expect(response.body.data.totalCompleted).toBe(5);
+    });
+
+    it('should reject request without authentication', async () => {
+      const response = await request(app)
+        .get('/api/queue/stats');
+
+      expect(response.status).toBe(401);
+      expect(response.body.success).toBe(false);
+      expect(response.body.error.code).toBe('UNAUTHORIZED');
     });
   });
 });

@@ -160,11 +160,18 @@ export class QueueService {
 
 
 
-- [ ] Implement POST /api/staff/login endpoint with session token generation
-- [ ] Implement GET /api/staff/queue endpoint to retrieve full queue
-- [ ] Implement POST /api/staff/call-next endpoint to call next patient
-- [ ] Implement POST /api/staff/complete endpoint to mark patient as completed
-- [ ] Add middleware for staff authentication on protected endpoints
+- [x] Implement the following endpoint: POST /api/staff/login endpoint with session token generation; GET /api/staff/queue endpoint to retrieve full queue; POST /api/staff/call-next endpoint to call next patient; POST /api/staff/complete endpoint to mark patient as completed
+
+
+
+
+
+- [x] Add middleware for staff authentication on protected endpoints
+
+
+
+
+
 - [ ] Create automatic position recalculation when patients are processed
 - [ ] Implement queue position advancement logic (remove gaps)
 

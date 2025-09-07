@@ -2,6 +2,7 @@ import {
   Router, Request, Response } from 'express';
 import { QueueService } from '../services/queue-service';
 import { CheckInRequest } from '../types/queue';
+import { authenticateStaff } from '../middleware/auth';
 
 const router = Router();
 const queueService = new QueueService();
@@ -135,7 +136,7 @@ router.get('/status/:id', handlePositionRequest);
  * GET /api/queue
  * Get the full queue (for staff dashboard)
  */
-router.get('/queue', async (req, res) => {
+router.get('/queue', authenticateStaff, async (req, res) => {
   try {
     const queue = await queueService.getQueue();
     
@@ -161,7 +162,7 @@ router.get('/queue', async (req, res) => {
  * GET /api/queue/stats
  * Get queue statistics
  */
-router.get('/queue/stats', async (req, res) => {
+router.get('/queue/stats', authenticateStaff, async (req, res) => {
   try {
     const stats = await queueService.getQueueStats();
     
