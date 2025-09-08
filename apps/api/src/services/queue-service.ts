@@ -8,6 +8,7 @@ import {
 } from '../types/queue';
 import { Prisma } from '@prisma/client';
 import Joi from 'joi';
+import { notificationService } from './notification-service';
 
 type PrismaQueuePosition = {
     id: string;
@@ -149,7 +150,23 @@ export class QueueService {
       });
 
       // Cast the result to ensure proper typing since Prisma returns string status
-      return this.castToQueuePosition(result);
+      const queuePosition = this.castToQueuePosition(result);
+
+      // Send check-in confirmation SMS
+      try {
+        await notificationService.sendCheckInConfirmation(
+          queuePosition.patient.name,
+          queuePosition.patient.phone,
+          queuePosition.position,
+          queuePosition.estimatedWaitMinutes || 0
+        );
+        console.log(`✅ Check-in confirmation SMS sent to ${queuePosition.patient.name} at ${queuePosition.patient.phone}`);
+      } catch (smsError) {
+        // Log SMS error but don't fail the check-in process
+        console.error('⚠️  Failed to send check-in confirmation SMS:', smsError);
+      }
+
+      return queuePosition;
     } catch (error) {
       if (error instanceof Error) {
         throw error;

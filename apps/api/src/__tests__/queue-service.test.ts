@@ -28,6 +28,22 @@ jest.mock('../config/database', () => ({
     }
 }));
 
+// Mock notification service
+const mockNotificationService = {
+    sendCheckInConfirmation: jest.fn(),
+    sendSMS: jest.fn(),
+    sendGetReadySMS: jest.fn(),
+    sendCallNowSMS: jest.fn(),
+    sendFollowUpSMS: jest.fn(),
+    getDeliveryStatus: jest.fn(),
+    validatePhoneNumber: jest.fn()
+};
+
+jest.mock('../services/notification-service', () => ({
+    notificationService: mockNotificationService,
+    NotificationService: jest.fn().mockImplementation(() => mockNotificationService)
+}));
+
 // ✅ IMPORTS AFTER THE MOCK
 import { QueueService } from '../services/queue-service';
 import { CheckInRequest, QueuePosition } from '../types/queue';
@@ -92,6 +108,114 @@ describe('QueueService', () => {
 
             expect(result).toEqual(mockQueuePosition);
             expect(mockPrisma.$transaction).toHaveBeenCalled();
+        });
+
+        it('should send check-in confirmation SMS after successful check-in', async () => {
+            // Mock no existing patient
+            mockPrisma.queuePosition.findFirst.mockResolvedValue(null);
+
+            // Mock successful SMS sending
+            mockNotificationService.sendCheckInConfirmation.mockResolvedValue({
+                messageId: 'test-message-id',
+                status: 'sent'
+            });
+
+            // Mock transaction with proper typing
+            const mockQueuePosition: QueuePosition = {
+                id: 'queue-1',
+                patientId: 'patient-1',
+                position: 3,
+                status: 'waiting',
+                checkInTime: new Date(),
+                estimatedWaitMinutes: 45,
+                calledAt: null,
+                completedAt: null,
+                patient: {
+                    id: 'patient-1',
+                    name: 'John Doe',
+                    phone: '+1234567890',
+                    createdAt: new Date()
+                }
+            };
+
+            mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
+                return callback({
+                    patient: {
+                        create: jest.fn().mockResolvedValue({
+                            id: 'patient-1',
+                            name: 'John Doe',
+                            phone: '+1234567890',
+                            createdAt: new Date()
+                        })
+                    },
+                    queuePosition: {
+                        create: jest.fn().mockResolvedValue(mockQueuePosition)
+                    }
+                } as any);
+            });
+
+            const result = await queueService.checkIn(validCheckInData);
+
+            // Verify check-in was successful
+            expect(result).toEqual(mockQueuePosition);
+
+            // Verify SMS notification was sent with correct parameters
+            expect(mockNotificationService.sendCheckInConfirmation).toHaveBeenCalledWith(
+                'John Doe',
+                '+1234567890',
+                3,
+                45
+            );
+        });
+
+        it('should continue check-in process even if SMS fails', async () => {
+            // Mock no existing patient
+            mockPrisma.queuePosition.findFirst.mockResolvedValue(null);
+
+            // Mock SMS failure
+            mockNotificationService.sendCheckInConfirmation.mockRejectedValue(
+                new Error('SMS service unavailable')
+            );
+
+            // Mock transaction
+            const mockQueuePosition: QueuePosition = {
+                id: 'queue-1',
+                patientId: 'patient-1',
+                position: 1,
+                status: 'waiting',
+                checkInTime: new Date(),
+                estimatedWaitMinutes: 15,
+                calledAt: null,
+                completedAt: null,
+                patient: {
+                    id: 'patient-1',
+                    name: 'John Doe',
+                    phone: '+1234567890',
+                    createdAt: new Date()
+                }
+            };
+
+            mockPrisma.$transaction.mockImplementation(async (callback: (tx: any) => Promise<any>) => {
+                return callback({
+                    patient: {
+                        create: jest.fn().mockResolvedValue({
+                            id: 'patient-1',
+                            name: 'John Doe',
+                            phone: '+1234567890',
+                            createdAt: new Date()
+                        })
+                    },
+                    queuePosition: {
+                        create: jest.fn().mockResolvedValue(mockQueuePosition)
+                    }
+                } as any);
+            });
+
+            // Check-in should still succeed even if SMS fails
+            const result = await queueService.checkIn(validCheckInData);
+
+            expect(result).toEqual(mockQueuePosition);
+            expect(mockNotificationService.sendCheckInConfirmation).toHaveBeenCalled();
         });
 
         it('should reject duplicate phone numbers', async () => {

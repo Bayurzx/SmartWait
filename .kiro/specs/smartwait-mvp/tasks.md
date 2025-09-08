@@ -179,10 +179,13 @@ app.post('/api/staff/call-next', authenticateStaff, async (req, res) => {
 
 - [x] Set up Twilio SDK integration with account credentials
 
-- [ ] Create NotificationService class for SMS operations
-- [ ] Implement check-in confirmation SMS (sent immediately after check-in)
-- [ ] Implement "get ready" SMS (sent when patient is 2 positions away)
-- [ ] Implement "come in now" SMS (sent when patient is called)
+- [x] Confirm NotificationService class for SMS operations. Implement check-in confirmation SMS (sent immediately after check-in)
+
+
+
+
+
+- [ ] Implement "get ready" SMS (sent when patient is 2 positions away). Implement "come in now" SMS (sent when patient is called)
 - [ ] Add SMS delivery tracking and error handling
 - [ ] Create SMS message templates with queue position and wait time
 - [ ] Implement retry logic for failed SMS deliveries
