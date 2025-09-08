@@ -13,43 +13,23 @@ This implementation plan breaks down the SmartWait MVP into 10 days of focused d
 ## Day 1: Project Foundation and Database Setup
 
 ### Task 1.1: Project Structure and Database Schema
+
 **Priority:** P0 | **Estimate:** 1 day | **Status:** Not Started
 
 **Description:** Set up the complete project structure with database schema and basic API foundation.
 
 **Acceptance Criteria:**
+
 - [x] Create monorepo structure with api/, web/, and mobile/ directories
-
-
-
-
 
 - [x] Set up PostgreSQL database with complete schema (patients, queue_positions, staff_sessions, sms_notifications)
 
-
-
-
-
-
-
-
-
-
-
 - [x] Check or create Docker Compose configuration for local development and Set up TypeScript configuration for all projects
-
-
-
-
 
 - [x] Create basic Express.js API server with health check endpoint; Set up Redis for caching and real-time features; Create database migration scripts and seed data and Set up environment configuration for all services (Make sure to confirm first they might exist already)
 
-
-
-
-
-
 **Technical Implementation:**
+
 ```typescript
 // Database schema implementation
 CREATE TABLE patients (
@@ -73,6 +53,7 @@ CREATE TABLE queue_positions (
 ```
 
 **Deliverables:**
+
 - Working Docker Compose environment
 - Database with all tables created
 - Basic API server responding to health checks
@@ -85,37 +66,23 @@ CREATE TABLE queue_positions (
 ## Day 2: Core Queue Service and API Endpoints
 
 ### Task 2.1: Queue Management Service Implementation
+
 **Priority:** P0 | **Estimate:** 1 day | **Status:** Not Started
 
 **Description:** Implement the core queue management service with patient check-in and position tracking.
 
 **Acceptance Criteria:**
+
 - [x] Create QueueService class with check-in, position tracking, and queue management methods
-
-
-
-
 
 - [x] Implement POST /api/checkin endpoint with input validation and GET /api/position/:id endpoint for position queries
 
-
-
-
-
 - [x] Create automatic position assignment logic (sequential numbering)
-
-
-
-
 
 - [x] Confirm the following: Implement basic wait time estimation (position × 15 minutes average); Add input validation for patient data (name, phone, appointment time); Create error handling for duplicate check-ins and invalid data; Write unit tests for queue service core logic
 
-
-
-
-
-
 **Technical Implementation:**
+
 ```typescript
 // Core queue service
 export class QueueService {
@@ -137,6 +104,7 @@ export class QueueService {
 ```
 
 **Deliverables:**
+
 - Working check-in API endpoint
 - Position tracking API endpoint
 - Queue service with unit tests
@@ -149,33 +117,23 @@ export class QueueService {
 ## Day 3: Staff Dashboard API and Authentication
 
 ### Task 3.1: Staff Dashboard Backend Implementation
+
 **Priority:** P0 | **Estimate:** 1 day | **Status:** Not Started
 
 **Description:** Build staff-facing API endpoints for queue management and basic authentication.
 
 **Acceptance Criteria:**
+
 - [x] Create staff authentication system with simple username/password
-
-
-
-
 
 - [x] Implement the following endpoint: POST /api/staff/login endpoint with session token generation; GET /api/staff/queue endpoint to retrieve full queue; POST /api/staff/call-next endpoint to call next patient; POST /api/staff/complete endpoint to mark patient as completed
 
-
-
-
-
 - [x] Add middleware for staff authentication on protected endpoints
 
-
-
-
-
-- [ ] Create automatic position recalculation when patients are processed
-- [ ] Implement queue position advancement logic (remove gaps)
+- [x] Create automatic position recalculation when patients are processed. Implement queue position advancement logic (remove gaps)
 
 **Technical Implementation:**
+
 ```typescript
 // Staff endpoints
 app.post('/api/staff/login', async (req, res) => {
@@ -199,6 +157,7 @@ app.post('/api/staff/call-next', authenticateStaff, async (req, res) => {
 ```
 
 **Deliverables:**
+
 - Staff authentication system
 - Complete staff API endpoints
 - Queue management functionality
@@ -211,12 +170,15 @@ app.post('/api/staff/call-next', authenticateStaff, async (req, res) => {
 ## Day 4: SMS Notification Service
 
 ### Task 4.1: Twilio SMS Integration and Notification Logic
+
 **Priority:** P0 | **Estimate:** 1 day | **Status:** Not Started
 
 **Description:** Integrate Twilio SMS service and implement all notification scenarios.
 
 **Acceptance Criteria:**
-- [ ] Set up Twilio SDK integration with account credentials
+
+- [x] Set up Twilio SDK integration with account credentials
+
 - [ ] Create NotificationService class for SMS operations
 - [ ] Implement check-in confirmation SMS (sent immediately after check-in)
 - [ ] Implement "get ready" SMS (sent when patient is 2 positions away)
@@ -227,6 +189,7 @@ app.post('/api/staff/call-next', authenticateStaff, async (req, res) => {
 - [ ] Add SMS notification logging to database
 
 **Technical Implementation:**
+
 ```typescript
 // SMS notification service
 export class NotificationService {
@@ -248,6 +211,7 @@ export class NotificationService {
 ```
 
 **Deliverables:**
+
 - Working Twilio SMS integration
 - All SMS notification scenarios implemented
 - SMS delivery tracking and logging
@@ -257,14 +221,17 @@ export class NotificationService {
 
 ---
 
+
 ## Day 5: Real-Time Updates with WebSocket
 
 ### Task 5.1: Socket.io Real-Time Communication
+
 **Priority:** P0 | **Estimate:** 1 day | **Status:** Not Started
 
 **Description:** Implement WebSocket-based real-time updates for queue position changes.
 
 **Acceptance Criteria:**
+
 - [ ] Set up Socket.io server with Redis adapter for scaling
 - [ ] Create patient and staff WebSocket rooms for targeted updates
 - [ ] Implement real-time position updates when queue changes
@@ -275,6 +242,7 @@ export class NotificationService {
 - [ ] Create real-time update event types and data structures
 
 **Technical Implementation:**
+
 ```typescript
 // Real-time service
 export class RealtimeService {
@@ -299,6 +267,7 @@ export class RealtimeService {
 ```
 
 **Deliverables:**
+
 - Working Socket.io server with Redis
 - Real-time queue update broadcasting
 - Patient and staff WebSocket rooms
@@ -311,11 +280,13 @@ export class RealtimeService {
 ## Day 6: React Native Mobile App
 
 ### Task 6.1: Mobile App with Check-In and Queue Status
+
 **Priority:** P0 | **Estimate:** 1 day | **Status:** Not Started
 
 **Description:** Build React Native mobile app with Expo for patient check-in and queue tracking.
 
 **Acceptance Criteria:**
+
 - [ ] Create Expo React Native app with TypeScript
 - [ ] Build check-in form with name, phone, and appointment time inputs
 - [ ] Implement form validation and error handling
@@ -327,6 +298,7 @@ export class RealtimeService {
 - [ ] Store patient ID locally for status checking
 
 **Technical Implementation:**
+
 ```typescript
 // Check-in screen component
 export const CheckInScreen: React.FC = () => {
@@ -363,6 +335,7 @@ export const CheckInScreen: React.FC = () => {
 ```
 
 **Deliverables:**
+
 - Working React Native app with Expo
 - Check-in form with validation
 - Queue status screen with real-time updates
@@ -375,11 +348,13 @@ export const CheckInScreen: React.FC = () => {
 ## Day 7: Next.js Web Portal
 
 ### Task 7.1: Web Portal for Browser-Based Check-In
+
 **Priority:** P0 | **Estimate:** 1 day | **Status:** Not Started
 
 **Description:** Create Next.js web portal as alternative to mobile app for patient check-in.
 
 **Acceptance Criteria:**
+
 - [ ] Set up Next.js 13+ application with TypeScript and Tailwind CSS
 - [ ] Create responsive check-in form matching mobile app functionality
 - [ ] Implement server-side rendering for fast initial page load
@@ -390,6 +365,7 @@ export const CheckInScreen: React.FC = () => {
 - [ ] Add loading states and error boundaries
 
 **Technical Implementation:**
+
 ```typescript
 // Check-in page component
 export default function CheckInPage() {
@@ -437,6 +413,7 @@ export default function CheckInPage() {
 ```
 
 **Deliverables:**
+
 - Working Next.js web portal
 - Responsive check-in form
 - Queue status page with real-time updates
@@ -449,11 +426,13 @@ export default function CheckInPage() {
 ## Day 8: Staff Dashboard Frontend
 
 ### Task 8.1: Next.js Staff Dashboard Interface
+
 **Priority:** P0 | **Estimate:** 1 day | **Status:** Not Started
 
 **Description:** Build staff dashboard interface for queue management and patient operations.
 
 **Acceptance Criteria:**
+
 - [ ] Create Next.js staff dashboard application with authentication
 - [ ] Build login page with username/password form
 - [ ] Create main dashboard showing queue table with patient information
@@ -465,6 +444,7 @@ export default function CheckInPage() {
 - [ ] Implement session management and automatic logout
 
 **Technical Implementation:**
+
 ```typescript
 // Staff dashboard component
 export const StaffDashboard: React.FC = () => {
@@ -529,6 +509,7 @@ export const StaffDashboard: React.FC = () => {
 ```
 
 **Deliverables:**
+
 - Working staff dashboard with authentication
 - Queue management interface
 - Real-time updates integration
@@ -541,11 +522,13 @@ export const StaffDashboard: React.FC = () => {
 ## Day 9: Integration Testing and Bug Fixes
 
 ### Task 9.1: End-to-End Integration and Testing
+
 **Priority:** P0 | **Estimate:** 1 day | **Status:** Not Started
 
 **Description:** Test complete system integration and fix critical bugs found during testing.
 
 **Acceptance Criteria:**
+
 - [ ] Test complete patient journey: check-in → SMS → position updates → called → completed
 - [ ] Test staff workflow: view queue → call patient → mark completed
 - [ ] Verify real-time updates work across mobile app, web portal, and staff dashboard
@@ -557,6 +540,7 @@ export const StaffDashboard: React.FC = () => {
 - [ ] Create basic unit tests for core queue logic
 
 **Testing Scenarios:**
+
 ```typescript
 // Integration test example
 describe('Complete Patient Journey', () => {
@@ -583,6 +567,7 @@ describe('Complete Patient Journey', () => {
 ```
 
 **Deliverables:**
+
 - Fully tested end-to-end workflows
 - Critical bug fixes implemented
 - Basic test suite for core functionality
@@ -595,11 +580,13 @@ describe('Complete Patient Journey', () => {
 ## Day 10: Deployment and Documentation
 
 ### Task 10.1: Production Deployment and Documentation
+
 **Priority:** P0 | **Estimate:** 1 day | **Status:** Not Started
 
 **Description:** Deploy MVP to production environment and create essential documentation.
 
 **Acceptance Criteria:**
+
 - [ ] Set up production server with Docker Compose
 - [ ] Configure production environment variables and secrets
 - [ ] Deploy all services (API, web portal, staff dashboard) to production
@@ -612,6 +599,7 @@ describe('Complete Patient Journey', () => {
 - [ ] Create troubleshooting guide for common issues
 
 **Production Deployment:**
+
 ```bash
 # Production deployment script
 #!/bin/bash
@@ -634,6 +622,7 @@ curl -f http://localhost:3000/health || exit 1
 ```
 
 **Documentation Deliverables:**
+
 - Production deployment guide
 - Patient user guide (how to check in and track status)
 - Staff user guide (how to manage queue)
@@ -647,6 +636,7 @@ curl -f http://localhost:3000/health || exit 1
 ## Success Criteria
 
 ### Technical Completion
+
 - [ ] All 6 requirements fully implemented and tested
 - [ ] Mobile app, web portal, and staff dashboard working
 - [ ] SMS notifications working for all scenarios
@@ -654,6 +644,7 @@ curl -f http://localhost:3000/health || exit 1
 - [ ] Production deployment successful and stable
 
 ### Performance Targets
+
 - [ ] Check-in completion time: <15 seconds
 - [ ] Real-time update propagation: <10 seconds
 - [ ] SMS delivery: <30 seconds
@@ -661,6 +652,7 @@ curl -f http://localhost:3000/health || exit 1
 - [ ] System handles 20 concurrent users without issues
 
 ### User Experience Validation
+
 - [ ] Patients can check in with <3 taps/clicks
 - [ ] Staff can manage queue with minimal training
 - [ ] SMS messages are clear and actionable
@@ -668,6 +660,7 @@ curl -f http://localhost:3000/health || exit 1
 - [ ] Error messages are helpful and clear
 
 ### Business Readiness
+
 - [ ] System can run for full business day (8 hours) without crashes
 - [ ] Basic monitoring and health checks in place
 - [ ] Documentation sufficient for facility staff training
@@ -677,6 +670,7 @@ curl -f http://localhost:3000/health || exit 1
 ## Risk Mitigation
 
 ### Critical Risks and Mitigation
+
 1. **SMS Delivery Failures:** Test Twilio thoroughly, implement retry logic
 2. **Real-time Update Issues:** Implement polling fallback, test WebSocket reliability
 3. **Database Performance:** Use proper indexes, test with realistic data volumes
@@ -684,6 +678,7 @@ curl -f http://localhost:3000/health || exit 1
 5. **Timeline Pressure:** Focus on core functionality, defer nice-to-have features
 
 ### Contingency Plans
+
 - **If SMS fails:** Continue with app-only notifications
 - **If real-time fails:** Use 30-second polling as backup
 - **If mobile app issues:** Focus on web portal as primary interface

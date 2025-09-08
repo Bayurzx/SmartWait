@@ -16,6 +16,7 @@
     "services:setup": "ts-node scripts/setup-services.ts",
     "services:setup:test": "NODE_ENV=test ts-node scripts/setup-services.ts --environment=test --skip-seed",
     "test:health": "ts-node scripts/test-health.ts",
+    "test:twilio": "ts-node src/scripts/test-twilio-integration.ts",
     "db:reset": "npx prisma migrate reset --force",
     "db:studio": "npx prisma studio",
     "db:verify": "ts-node scripts/verify-db-setup.ts",
