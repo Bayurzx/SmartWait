@@ -45,11 +45,13 @@ export interface QueueStatus {
 }
 
 export interface QueueUpdate {
-  type: 'position_change' | 'patient_called' | 'patient_completed';
+  type: 'position_change' | 'patient_called' | 'patient_completed' | 'patient_checked_in' | 'patient_no_show' | 'queue_cleared';
   patientId: string;
   newPosition?: number;
   estimatedWait?: number;
   timestamp: Date;
+  reason?: string;
+  affectedPatients?: number;
 }
 
 export interface PatientCallResult {
