@@ -1,3 +1,4 @@
+// apps\web\src\services\websocket-service.ts
 import { io, Socket } from 'socket.io-client';
 
 export interface WebSocketConfig {
@@ -56,10 +57,10 @@ export class WebSocketService {
       timeout: 20000,
       ...config
     };
-    
+
     this.maxReconnectAttempts = this.config.reconnectionAttempts || 5;
     this.reconnectDelay = this.config.reconnectionDelay || 1000;
-    
+
     this.setupBrowserEventHandlers();
   }
 
@@ -94,7 +95,7 @@ export class WebSocketService {
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', this.visibilityChangeHandler);
     }
-    
+
     if (typeof window !== 'undefined') {
       window.addEventListener('online', this.onlineHandler);
       window.addEventListener('offline', this.offlineHandler);
@@ -108,16 +109,16 @@ export class WebSocketService {
     try {
       this.authData = authData;
       this.isManualDisconnect = false;
-      
+
       if (this.socket?.connected) {
         console.log('🌐 WebSocket already connected');
         return;
       }
 
       this.updateConnectionStatus({ connecting: true, error: undefined });
-      
+
       console.log('🌐 Connecting to WebSocket server...');
-      
+
       // Create socket with authentication and reconnection config
       this.socket = io(this.config.url, {
         auth: {
@@ -132,7 +133,7 @@ export class WebSocketService {
       });
 
       this.setupEventHandlers();
-      
+
       // Manual connection if autoConnect is false
       if (!this.config.autoConnect) {
         this.socket.connect();
@@ -140,9 +141,9 @@ export class WebSocketService {
 
     } catch (error) {
       console.error('🌐 WebSocket connection error:', error);
-      this.updateConnectionStatus({ 
-        connecting: false, 
-        error: error instanceof Error ? error.message : 'Connection failed' 
+      this.updateConnectionStatus({
+        connecting: false,
+        error: error instanceof Error ? error.message : 'Connection failed'
       });
       this.scheduleReconnect();
     }
@@ -165,15 +166,15 @@ export class WebSocketService {
         lastConnected: new Date(),
         error: undefined
       });
-      
+
       this.startHeartbeat();
-      this.emit('connection_status', this.connectionStatus);
+      this.emitToListeners('connection_status', this.connectionStatus);
     });
 
     // Authentication successful
     this.socket.on('authenticated', (data) => {
       console.log('🌐 WebSocket authenticated:', data);
-      this.emit('authenticated', data);
+      this.emitToListeners('authenticated', data);
     });
 
     // Connection error
@@ -184,14 +185,14 @@ export class WebSocketService {
         connecting: false,
         error: error.message
       });
-      
+
       this.stopHeartbeat();
-      
+
       if (!this.isManualDisconnect) {
         this.scheduleReconnect();
       }
-      
-      this.emit('connection_error', error);
+
+      this.emitToListeners('connection_error', error);
     });
 
     // Disconnection
@@ -202,22 +203,22 @@ export class WebSocketService {
         connecting: false,
         error: `Disconnected: ${reason}`
       });
-      
+
       this.stopHeartbeat();
-      
+
       // Auto-reconnect unless it was a manual disconnect
       if (!this.isManualDisconnect && reason !== 'io client disconnect') {
         this.scheduleReconnect();
       }
-      
-      this.emit('disconnect', reason);
+
+      this.emitToListeners('disconnect', reason);
     });
 
     // Reconnection attempt
     this.socket.on('reconnect_attempt', (attemptNumber) => {
       console.log(`🌐 WebSocket reconnection attempt ${attemptNumber}`);
       this.updateConnectionStatus({ reconnecting: true });
-      this.emit('reconnect_attempt', attemptNumber);
+      this.emitToListeners('reconnect_attempt', attemptNumber);
     });
 
     // Reconnection successful
@@ -230,7 +231,7 @@ export class WebSocketService {
         lastConnected: new Date(),
         error: undefined
       });
-      this.emit('reconnect', attemptNumber);
+      this.emitToListeners('reconnect', attemptNumber);
     });
 
     // Reconnection failed
@@ -240,48 +241,48 @@ export class WebSocketService {
         reconnecting: false,
         error: 'Reconnection failed after maximum attempts'
       });
-      this.emit('reconnect_failed');
+      this.emitToListeners('reconnect_failed');
     });
 
     // Heartbeat response
     this.socket.on('pong', (data) => {
       console.log('🌐 Heartbeat pong received:', data);
-      this.emit('heartbeat', data);
+      this.emitToListeners('heartbeat', data);
     });
 
     // Queue updates
     this.socket.on('queue_update', (data) => {
       console.log('🌐 Queue update received:', data);
-      this.emit('queue_update', data);
+      this.emitToListeners('queue_update', data);
     });
 
     // Position updates
     this.socket.on('position_update', (data) => {
       console.log('🌐 Position update received:', data);
-      this.emit('position_update', data);
+      this.emitToListeners('position_update', data);
     });
 
     // Notification updates
     this.socket.on('notification', (data) => {
       console.log('🌐 Notification received:', data);
-      this.emit('notification', data);
+      this.emitToListeners('notification', data);
     });
 
     // Room events
     this.socket.on('room-joined', (data) => {
       console.log('🌐 Joined room:', data);
-      this.emit('room_joined', data);
+      this.emitToListeners('room_joined', data);
     });
 
     this.socket.on('room-left', (data) => {
       console.log('🌐 Left room:', data);
-      this.emit('room_left', data);
+      this.emitToListeners('room_left', data);
     });
 
     // Error handling
     this.socket.on('error', (error) => {
       console.error('🌐 WebSocket error:', error);
-      this.emit('error', error);
+      this.emitToListeners('error', error);
     });
   }
 
@@ -345,13 +346,13 @@ export class WebSocketService {
         try {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 5000);
-          
+
           await fetch(this.config.url.replace('/socket.io', '/health'), {
             method: 'HEAD',
             signal: controller.signal,
             cache: 'no-cache'
           });
-          
+
           clearTimeout(timeoutId);
         } catch (networkError) {
           console.log('🌐 Network connectivity test failed, will retry later');
@@ -368,10 +369,10 @@ export class WebSocketService {
 
       // Create new connection
       await this.connect(this.authData);
-      
+
     } catch (error) {
       console.error('🌐 Reconnection attempt failed:', error);
-      
+
       if (this.connectionStatus.reconnectAttempts < this.maxReconnectAttempts) {
         this.scheduleReconnect();
       } else {
@@ -379,7 +380,7 @@ export class WebSocketService {
           reconnecting: false,
           error: 'Max reconnection attempts exceeded'
         });
-        this.emit('max_reconnect_attempts_exceeded');
+        this.emitToListeners('max_reconnect_attempts_exceeded');
       }
     }
   }
@@ -389,7 +390,7 @@ export class WebSocketService {
    */
   private startHeartbeat(): void {
     this.stopHeartbeat();
-    
+
     this.heartbeatTimer = setInterval(() => {
       if (this.socket?.connected) {
         this.socket.emit('ping');
@@ -413,9 +414,9 @@ export class WebSocketService {
   disconnect(): void {
     console.log('🌐 Manual WebSocket disconnect');
     this.isManualDisconnect = true;
-    
+
     this.stopHeartbeat();
-    
+
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -434,7 +435,7 @@ export class WebSocketService {
       reconnectAttempts: 0
     });
 
-    this.emit('manual_disconnect');
+    this.emitToListeners('manual_disconnect');
   }
 
   /**
@@ -442,23 +443,23 @@ export class WebSocketService {
    */
   async forceReconnect(): Promise<void> {
     console.log('🌐 Force reconnecting WebSocket');
-    
+
     if (!this.authData) {
       throw new Error('No authentication data available for reconnection');
     }
 
     this.disconnect();
     this.isManualDisconnect = false;
-    
+
     // Reset reconnection attempts for manual reconnection
     this.updateConnectionStatus({
       reconnectAttempts: 0,
       error: undefined
     });
-    
+
     // Wait a moment before reconnecting
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     await this.connect(this.authData);
   }
 
@@ -510,7 +511,7 @@ export class WebSocketService {
    */
   off(event: string, callback?: Function): void {
     if (!this.listeners.has(event)) return;
-    
+
     if (callback) {
       const callbacks = this.listeners.get(event)!;
       const index = callbacks.indexOf(callback);
@@ -523,9 +524,9 @@ export class WebSocketService {
   }
 
   /**
-   * Emit event to listeners
+   * Emit event to listeners (renamed to avoid conflict)
    */
-  private emit(event: string, data?: any): void {
+  private emitToListeners(event: string, data?: any): void {
     const callbacks = this.listeners.get(event);
     if (callbacks) {
       callbacks.forEach(callback => {
@@ -543,7 +544,7 @@ export class WebSocketService {
    */
   private updateConnectionStatus(updates: Partial<ConnectionStatus>): void {
     this.connectionStatus = { ...this.connectionStatus, ...updates };
-    this.emit('connection_status_changed', this.connectionStatus);
+    this.emitToListeners('connection_status_changed', this.connectionStatus);
   }
 
   /**
@@ -577,8 +578,11 @@ export class WebSocketService {
       return false;
     }
 
+    // Store socket reference to avoid null issues
+    const socket = this.socket;
+
     // If socket thinks it's connected but we haven't received a heartbeat recently
-    if (this.socket.connected) {
+    if (socket.connected) {
       return new Promise((resolve) => {
         const timeout = setTimeout(() => {
           console.log('🌐 Connection health check failed - no pong received');
@@ -590,12 +594,12 @@ export class WebSocketService {
 
         const pongHandler = () => {
           clearTimeout(timeout);
-          this.socket?.off('pong', pongHandler);
+          socket.off('pong', pongHandler);
           resolve(true);
         };
 
-        this.socket.on('pong', pongHandler);
-        this.socket.emit('ping');
+        socket.on('pong', pongHandler);
+        socket.emit('ping');
       });
     }
 
@@ -603,7 +607,7 @@ export class WebSocketService {
     if (!this.isManualDisconnect) {
       this.attemptReconnect();
     }
-    
+
     return false;
   }
 
@@ -656,15 +660,15 @@ export class WebSocketService {
     if (this.visibilityChangeHandler && typeof document !== 'undefined') {
       document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
     }
-    
+
     if (this.onlineHandler && typeof window !== 'undefined') {
       window.removeEventListener('online', this.onlineHandler);
     }
-    
+
     if (this.offlineHandler && typeof window !== 'undefined') {
       window.removeEventListener('offline', this.offlineHandler);
     }
-    
+
     this.disconnect();
   }
 }
@@ -679,11 +683,11 @@ export const getWebSocketService = (config?: WebSocketConfig): WebSocketService 
   if (!webSocketService && config) {
     webSocketService = new WebSocketService(config);
   }
-  
+
   if (!webSocketService) {
     throw new Error('WebSocket service not initialized. Provide config on first call.');
   }
-  
+
   return webSocketService;
 };
 

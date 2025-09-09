@@ -154,7 +154,7 @@ describe('WebSocket Automatic Reconnection (Web)', () => {
     });
 
     // Trigger connection error
-    const errorCallback = mockSocket.on.mock.calls.find(call => call[0] === 'connect_error')?.[1];
+    const errorCallback = mockSocket.on.mock.calls.find((call: [string, Function]) => call[0] === 'connect_error')?.[1];
     if (errorCallback) {
       errorCallback(new Error('Connection failed'));
     }
