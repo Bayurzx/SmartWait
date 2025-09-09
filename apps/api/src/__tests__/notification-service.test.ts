@@ -15,6 +15,15 @@ jest.mock('../config/twilio', () => ({
   }
 }));
 
+// Mock Prisma client
+jest.mock('../config/database', () => ({
+  prisma: {
+    smsNotification: {
+      create: jest.fn()
+    }
+  }
+}));
+
 describe('NotificationService', () => {
   let notificationService: NotificationService;
   const mockTwilioCreate = twilioClient.messages.create as jest.MockedFunction<typeof twilioClient.messages.create>;
@@ -107,7 +116,8 @@ describe('NotificationService', () => {
         'John Doe',
         '+1234567890',
         5,
-        25
+        25,
+        'test-patient-id'
       );
 
       expect(result.status).toBe('sent');
@@ -126,7 +136,7 @@ describe('NotificationService', () => {
         status: 'sent'
       } as any);
 
-      const result = await notificationService.sendGetReadySMS('John Doe', '+1234567890');
+      const result = await notificationService.sendGetReadySMS('John Doe', '+1234567890', 'test-patient-id');
 
       expect(result.status).toBe('sent');
       expect(mockTwilioCreate).toHaveBeenCalledWith({
@@ -144,7 +154,7 @@ describe('NotificationService', () => {
         status: 'sent'
       } as any);
 
-      const result = await notificationService.sendCallNowSMS('John Doe', '+1234567890');
+      const result = await notificationService.sendCallNowSMS('John Doe', '+1234567890', 'test-patient-id');
 
       expect(result.status).toBe('sent');
       expect(mockTwilioCreate).toHaveBeenCalledWith({

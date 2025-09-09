@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getDatabaseHealth, getDatabaseStats } from '../utils/database';
 import { getRedisHealth } from '../config/redis';
+import { getSocketIOHealth } from '../config/socket';
 
 const router = Router();
 
@@ -9,9 +10,10 @@ const router = Router();
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const [dbHealth, redisHealth] = await Promise.all([
+    const [dbHealth, redisHealth, socketHealth] = await Promise.all([
       getDatabaseHealth(),
       getRedisHealth(),
+      Promise.resolve(getSocketIOHealth()),
     ]);
     
     const health = {
@@ -20,10 +22,14 @@ router.get('/', async (req: Request, res: Response) => {
       uptime: process.uptime(),
       database: dbHealth,
       redis: redisHealth,
+      socketio: socketHealth,
       version: process.env.npm_package_version || '1.0.0',
     };
 
-    const statusCode = (dbHealth.status === 'healthy' && redisHealth.status === 'healthy') ? 200 : 503;
+    const allHealthy = dbHealth.status === 'healthy' && 
+                      redisHealth.status === 'healthy' && 
+                      socketHealth.status === 'healthy';
+    const statusCode = allHealthy ? 200 : 503;
     res.status(statusCode).json(health);
   } catch (error) {
     res.status(503).json({
@@ -39,10 +45,11 @@ router.get('/', async (req: Request, res: Response) => {
  */
 router.get('/detailed', async (req: Request, res: Response) => {
   try {
-    const [dbHealth, dbStats, redisHealth] = await Promise.all([
+    const [dbHealth, dbStats, redisHealth, socketHealth] = await Promise.all([
       getDatabaseHealth(),
       getDatabaseStats(),
       getRedisHealth(),
+      Promise.resolve(getSocketIOHealth()),
     ]);
 
     const health = {
@@ -55,10 +62,14 @@ router.get('/detailed', async (req: Request, res: Response) => {
         statistics: dbStats,
       },
       redis: redisHealth,
+      socketio: socketHealth,
       version: process.env.npm_package_version || '1.0.0',
     };
 
-    const statusCode = (dbHealth.status === 'healthy' && redisHealth.status === 'healthy') ? 200 : 503;
+    const allHealthy = dbHealth.status === 'healthy' && 
+                      redisHealth.status === 'healthy' && 
+                      socketHealth.status === 'healthy';
+    const statusCode = allHealthy ? 200 : 503;
     res.status(statusCode).json(health);
   } catch (error) {
     res.status(503).json({

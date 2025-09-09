@@ -185,11 +185,21 @@ app.post('/api/staff/call-next', authenticateStaff, async (req, res) => {
 
 
 
-- [ ] Implement "get ready" SMS (sent when patient is 2 positions away). Implement "come in now" SMS (sent when patient is called)
-- [ ] Add SMS delivery tracking and error handling
-- [ ] Create SMS message templates with queue position and wait time
-- [ ] Implement retry logic for failed SMS deliveries
-- [ ] Add SMS notification logging to database
+- [x] Implement "get ready" SMS (sent when patient is 2 positions away). Implement "come in now" SMS (sent when patient is called)
+
+
+
+
+
+- [x] Add SMS delivery tracking and error handling. Create SMS message templates with queue position and wait time. Implement retry logic for failed SMS deliveries. Add SMS notification logging to database
+
+
+
+
+
+
+
+
 
 **Technical Implementation:**
 
@@ -235,12 +245,42 @@ export class NotificationService {
 
 **Acceptance Criteria:**
 
-- [ ] Set up Socket.io server with Redis adapter for scaling
-- [ ] Create patient and staff WebSocket rooms for targeted updates
-- [ ] Implement real-time position updates when queue changes
-- [ ] Create RealtimeService to broadcast queue updates
-- [ ] Integrate real-time updates with queue operations (check-in, call, complete)
-- [ ] Add WebSocket authentication and room management
+- [x] Set up Socket.io server with Redis adapter for scaling
+
+
+
+
+
+- [x] Create patient and staff WebSocket rooms for targeted updates
+
+
+
+
+
+- [x] Implement real-time position updates when queue changes
+
+
+
+
+
+- [x] Create RealtimeService to broadcast queue updates
+
+
+
+
+
+- [x] Integrate real-time updates with queue operations (check-in, call, complete)
+
+
+
+
+
+- [x] Add WebSocket authentication and room management
+
+
+
+
+
 - [ ] Implement automatic reconnection handling
 - [ ] Create real-time update event types and data structures
 

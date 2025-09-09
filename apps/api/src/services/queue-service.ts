@@ -9,6 +9,7 @@ import {
 import { Prisma } from '@prisma/client';
 import Joi from 'joi';
 import { notificationService } from './notification-service';
+import RealtimeService from './realtime-service';
 
 type PrismaQueuePosition = {
     id: string;
@@ -158,12 +159,44 @@ export class QueueService {
           queuePosition.patient.name,
           queuePosition.patient.phone,
           queuePosition.position,
-          queuePosition.estimatedWaitMinutes || 0
+          queuePosition.estimatedWaitMinutes || 0,
+          queuePosition.patient.id
         );
         console.log(`✅ Check-in confirmation SMS sent to ${queuePosition.patient.name} at ${queuePosition.patient.phone}`);
       } catch (smsError) {
         // Log SMS error but don't fail the check-in process
         console.error('⚠️  Failed to send check-in confirmation SMS:', smsError);
+      }
+
+      // After a new patient checks in, check if any existing patients need "get ready" SMS
+      // This handles the case where the queue was shorter and now someone is at position 3
+      await this.checkAndSendGetReadySMS();
+
+      // Broadcast real-time updates
+      try {
+        // Notify staff of new patient
+        RealtimeService.notifyStaffNewPatient({
+          id: queuePosition.patient.id,
+          name: queuePosition.patient.name,
+          phone: queuePosition.patient.phone,
+          position: queuePosition.position,
+          estimatedWait: queuePosition.estimatedWaitMinutes || 0,
+          checkInTime: queuePosition.checkInTime
+        });
+
+        // Broadcast queue update to all patients
+        RealtimeService.broadcastQueueUpdate({
+          type: 'position_change',
+          patientId: queuePosition.patient.id,
+          newPosition: queuePosition.position,
+          estimatedWait: queuePosition.estimatedWaitMinutes || 0,
+          timestamp: new Date().toISOString()
+        });
+
+        console.log(`📡 Real-time updates sent for new patient: ${queuePosition.patient.name}`);
+      } catch (realtimeError) {
+        // Log real-time error but don't fail the check-in process
+        console.error('⚠️  Failed to send real-time updates:', realtimeError);
       }
 
       return queuePosition;
@@ -296,6 +329,44 @@ export class QueueService {
         }
       });
 
+      // Send "come in now" SMS to the called patient
+      try {
+        await notificationService.sendCallNowSMS(
+          nextPatient.patient.name,
+          nextPatient.patient.phone,
+          nextPatient.patient.id
+        );
+        console.log(`✅ "Come in now" SMS sent to ${nextPatient.patient.name} at ${nextPatient.patient.phone}`);
+      } catch (smsError) {
+        // Log SMS error but don't fail the call operation
+        console.error('⚠️  Failed to send "come in now" SMS:', smsError);
+      }
+
+      // After calling a patient, check if we need to send "get ready" SMS to the patient who is now 2 positions away
+      await this.checkAndSendGetReadySMS();
+
+      // Broadcast real-time updates
+      try {
+        // Notify the specific patient they are being called
+        RealtimeService.notifyPatientCalled(
+          nextPatient.patient.id,
+          `${nextPatient.patient.name}, it's your turn! Please come to the front desk now.`
+        );
+
+        // Broadcast queue update to all patients and staff
+        RealtimeService.broadcastQueueUpdate({
+          type: 'patient_called',
+          patientId: nextPatient.patient.id,
+          newPosition: nextPatient.position,
+          timestamp: new Date().toISOString()
+        });
+
+        console.log(`📡 Real-time updates sent for called patient: ${nextPatient.patient.name}`);
+      } catch (realtimeError) {
+        // Log real-time error but don't fail the call operation
+        console.error('⚠️  Failed to send real-time updates:', realtimeError);
+      }
+
       return {
         success: true,
         patient: {
@@ -343,11 +414,120 @@ export class QueueService {
 
       // Recalculate positions for remaining patients
       await this.recalculatePositions();
+
+      // After completing a patient, check if we need to send "get ready" SMS to patients who are now 2 positions away
+      await this.checkAndSendGetReadySMS();
+
+      // Broadcast real-time updates
+      try {
+        // Broadcast queue update to all patients and staff about patient completion
+        RealtimeService.broadcastQueueUpdate({
+          type: 'patient_completed',
+          patientId,
+          timestamp: new Date().toISOString()
+        });
+
+        // Get updated queue and broadcast refresh to staff
+        const updatedQueue = await this.getQueue();
+        RealtimeService.broadcastQueueRefresh(updatedQueue);
+
+        // Notify all remaining patients of their updated positions
+        for (const position of updatedQueue) {
+          if (position.status === 'waiting') {
+            RealtimeService.notifyPatientPositionChange(
+              position.patient.id,
+              position.position,
+              position.estimatedWaitMinutes || 0
+            );
+          }
+        }
+
+        console.log(`📡 Real-time updates sent for completed patient: ${patientId}`);
+      } catch (realtimeError) {
+        // Log real-time error but don't fail the completion operation
+        console.error('⚠️  Failed to send real-time updates:', realtimeError);
+      }
     } catch (error) {
       if (error instanceof Error) {
         throw error;
       }
       throw new Error('Failed to mark patient as completed');
+    }
+  }
+
+  /**
+   * Mark a patient as no-show and remove from queue
+   * @param patientId Patient ID to mark as no-show
+   */
+  async markPatientNoShow(patientId: string): Promise<void> {
+    try {
+      const queuePosition = await prisma.queuePosition.findFirst({
+        where: {
+          patientId,
+          status: {
+            in: ['waiting', 'called']
+          }
+        },
+        include: {
+          patient: true
+        }
+      });
+
+      if (!queuePosition) {
+        throw new Error('Patient not found in active queue');
+      }
+
+      // Mark patient as no-show
+      await prisma.queuePosition.update({
+        where: {
+          id: queuePosition.id
+        },
+        data: {
+          status: 'no_show',
+          completedAt: new Date()
+        }
+      });
+
+      // Recalculate positions for remaining patients
+      await this.recalculatePositions();
+
+      // After marking no-show, check if we need to send "get ready" SMS to patients who are now 2 positions away
+      await this.checkAndSendGetReadySMS();
+
+      // Broadcast real-time updates
+      try {
+        // Broadcast queue update to all patients and staff about patient no-show
+        RealtimeService.broadcastQueueUpdate({
+          type: 'patient_completed', // Use same type as completion for queue management
+          patientId,
+          timestamp: new Date().toISOString()
+        });
+
+        // Get updated queue and broadcast refresh to staff
+        const updatedQueue = await this.getQueue();
+        RealtimeService.broadcastQueueRefresh(updatedQueue);
+
+        // Notify all remaining patients of their updated positions
+        for (const position of updatedQueue) {
+          if (position.status === 'waiting') {
+            RealtimeService.notifyPatientPositionChange(
+              position.patient.id,
+              position.position,
+              position.estimatedWaitMinutes || 0
+            );
+          }
+        }
+
+        console.log(`📡 Real-time updates sent for no-show patient: ${patientId}`);
+      } catch (realtimeError) {
+        // Log real-time error but don't fail the no-show operation
+        console.error('⚠️  Failed to send real-time updates:', realtimeError);
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to mark patient as no-show');
     }
   }
 
@@ -519,4 +699,90 @@ export class QueueService {
       }
     }
   }
+
+  /**
+   * Check if any patients are 2 positions away from being called and send "get ready" SMS
+   * This method is called after queue changes (patient called or completed)
+   */
+  private async checkAndSendGetReadySMS(): Promise<void> {
+    try {
+      // Find patients who are in position 3 (2 positions away from being called)
+      // Position 1 = currently being called, Position 2 = next up, Position 3 = get ready
+      const patientsToNotify = await prisma.queuePosition.findMany({
+        where: {
+          status: 'waiting',
+          position: 3
+        },
+        include: {
+          patient: true
+        }
+      });
+
+      // Send "get ready" SMS to each patient at position 3
+      for (const queuePosition of patientsToNotify) {
+        try {
+          // Check if we've already sent a "get ready" SMS to this patient
+          // We'll use a simple approach: check if they were recently notified
+          const recentNotification = await this.hasRecentGetReadyNotification(queuePosition.patientId);
+          
+          if (!recentNotification) {
+            await notificationService.sendGetReadySMS(
+              queuePosition.patient.name,
+              queuePosition.patient.phone,
+              queuePosition.patient.id
+            );
+            
+            // Send real-time "get ready" notification
+            try {
+              RealtimeService.notifyPatientGetReady(
+                queuePosition.patient.id,
+                queuePosition.estimatedWaitMinutes || 15
+              );
+              console.log(`📡 Real-time "get ready" notification sent to ${queuePosition.patient.name}`);
+            } catch (realtimeError) {
+              console.error('⚠️  Failed to send real-time "get ready" notification:', realtimeError);
+            }
+            
+            console.log(`✅ "Get ready" SMS sent to ${queuePosition.patient.name} at ${queuePosition.patient.phone} (Position 3)`);
+          }
+        } catch (smsError) {
+          // Log SMS error but continue with other patients
+          console.error(`⚠️  Failed to send "get ready" SMS to ${queuePosition.patient.name}:`, smsError);
+        }
+      }
+    } catch (error) {
+      console.error('⚠️  Error checking for "get ready" SMS notifications:', error);
+    }
+  }
+
+  /**
+   * Check if a patient has received a "get ready" notification recently
+   * This prevents duplicate notifications when queue positions change
+   */
+  private async hasRecentGetReadyNotification(patientId: string): Promise<boolean> {
+    try {
+      // Check if there's a recent SMS notification for this patient
+      // We'll look for notifications sent in the last 30 minutes
+      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+      
+      const recentNotification = await prisma.smsNotification.findFirst({
+        where: {
+          patientId,
+          message: {
+            contains: 'you\'re next!' // Part of the "get ready" message
+          },
+          sentAt: {
+            gte: thirtyMinutesAgo
+          }
+        }
+      });
+
+      return recentNotification !== null;
+    } catch (error) {
+      console.error('Error checking recent notifications:', error);
+      return false; // If we can't check, err on the side of sending the notification
+    }
+  }
+
+
 }

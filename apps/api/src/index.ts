@@ -2,18 +2,21 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import { createServer } from 'http';
 
 // Load environment variables
 dotenv.config();
 
-// Import database, Redis, and routes
+// Import database, Redis, Socket.io, and routes
 import { testDatabaseConnection, cleanupExpiredSessions } from './utils/database';
 import { connectRedis, testRedisConnection } from './config/redis';
+import { initializeSocketIO, getSocketIOHealth } from './config/socket';
 import healthRoutes from './routes/health';
 import queueRoutes from './routes/queue';
 import staffRoutes from './routes/staff';
 
 const app = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 3001;
 
 // Security middleware
@@ -74,13 +77,18 @@ async function startServer() {
     // Clean up expired sessions on startup
     await cleanupExpiredSessions();
 
+    // Initialize Socket.io with Redis adapter
+    console.log('🔌 Initializing Socket.io server...');
+    await initializeSocketIO(httpServer);
+
     // Start the server
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       console.log(`🚀 SmartWait API server running on port ${PORT}`);
       console.log(`📊 Health check available at http://localhost:${PORT}/health`);
       console.log(`📊 Detailed health check at http://localhost:${PORT}/health/detailed`);
       console.log(`🗄️  Database: Connected and ready`);
       console.log(`🔄 Redis: Connected and ready`);
+      console.log(`⚡ Socket.io: Real-time updates enabled with Redis scaling`);
     });
 
   } catch (error) {
