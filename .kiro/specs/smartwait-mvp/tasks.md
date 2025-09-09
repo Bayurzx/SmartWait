@@ -512,21 +512,21 @@ export default function CheckInPage() {
 
 ### Task 8.1: Next.js Staff Dashboard Interface
 
-**Priority:** P0 | **Estimate:** 1 day | **Status:** Not Started
+**Priority:** P0 | **Estimate:** 1 day | **Status:** Completed
 
 **Description:** Build staff dashboard interface for queue management and patient operations.
 
 **Acceptance Criteria:**
 
-- [ ] Create Next.js staff dashboard application with authentication
-- [ ] Build login page with username/password form
-- [ ] Create main dashboard showing queue table with patient information
-- [ ] Implement "Call Next Patient" button with confirmation
-- [ ] Add patient completion functionality with one-click operation
-- [ ] Display real-time queue updates without page refresh
-- [ ] Show patient details (name, phone, check-in time, wait duration)
-- [ ] Add basic styling for professional healthcare interface
-- [ ] Implement session management and automatic logout
+- [x] Create Next.js staff dashboard application with authentication
+- [x] Build login page with username/password form
+- [x] Create main dashboard showing queue table with patient information
+- [x] Implement "Call Next Patient" button with confirmation
+- [x] Add patient completion functionality with one-click operation
+- [x] Display real-time queue updates without page refresh
+- [x] Show patient details (name, phone, check-in time, wait duration)
+- [x] Add basic styling for professional healthcare interface
+- [x] Implement session management and automatic logout
 
 **Technical Implementation:**
 
