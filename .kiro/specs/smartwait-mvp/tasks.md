@@ -344,15 +344,25 @@ export class RealtimeService {
 
 **Acceptance Criteria:**
 
-- [ ] Create Expo React Native app with TypeScript
-- [ ] Build check-in form with name, phone, and appointment time inputs
-- [ ] Implement form validation and error handling
-- [ ] Create queue status screen showing position and estimated wait time
-- [ ] Integrate with API endpoints for check-in and position tracking
-- [ ] Add WebSocket integration for real-time position updates
-- [ ] Implement navigation between check-in and status screens
-- [ ] Add loading states and error handling for network requests
-- [ ] Store patient ID locally for status checking
+- [x] Create Expo React Native app with TypeScript
+
+
+
+
+
+- [x] Build check-in form with name, phone, and appointment time inputs. Implement form validation and error handling. Create queue status screen showing position and estimated wait time
+
+
+
+
+
+- [x] Integrate with API endpoints for check-in and position tracking. Add WebSocket integration for real-time position updates. Implement navigation between check-in and status screens
+
+- [x] Add loading states and error handling for network requests
+
+- [x] Store patient ID locally for status checking
+
+
 
 **Technical Implementation:**
 
@@ -406,20 +416,38 @@ export const CheckInScreen: React.FC = () => {
 
 ### Task 7.1: Web Portal for Browser-Based Check-In
 
-**Priority:** P0 | **Estimate:** 1 day | **Status:** Not Started
+**Priority:** P0 | **Estimate:** 1 day | **Status:** Completed
 
 **Description:** Create Next.js web portal as alternative to mobile app for patient check-in.
 
 **Acceptance Criteria:**
 
-- [ ] Set up Next.js 13+ application with TypeScript and Tailwind CSS
-- [ ] Create responsive check-in form matching mobile app functionality
-- [ ] Implement server-side rendering for fast initial page load
-- [ ] Build queue status page with real-time updates via WebSocket
-- [ ] Add form validation and error handling
-- [ ] Implement URL-based patient status checking (shareable links)
-- [ ] Create responsive design that works on mobile and desktop
-- [ ] Add loading states and error boundaries
+- [x] Set up Next.js 13+ application with TypeScript and Tailwind CSS
+
+
+
+
+- [x] Create responsive check-in form matching mobile app functionality
+
+
+- [x] Implement server-side rendering for fast initial page load
+
+
+
+
+- [x] Build queue status page with real-time updates via WebSocket
+
+
+
+
+- [x] Add form validation and error handling
+
+
+
+
+- [x] Implement URL-based patient status checking (shareable links)
+- [x] Create responsive design that works on mobile and desktop
+- [x] Add loading states and error boundaries
 
 **Technical Implementation:**
 

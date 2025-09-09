@@ -125,13 +125,13 @@ export class WebSocketService {
       });
       
       this.startHeartbeat();
-      this.emit('connection_status', this.connectionStatus);
+      this.emitToListeners('connection_status', this.connectionStatus);
     });
 
     // Authentication successful
     this.socket.on('authenticated', (data) => {
       console.log('📱 WebSocket authenticated:', data);
-      this.emit('authenticated', data);
+      this.emitToListeners('authenticated', data);
     });
 
     // Connection error
@@ -149,7 +149,7 @@ export class WebSocketService {
         this.scheduleReconnect();
       }
       
-      this.emit('connection_error', error);
+      this.emitToListeners('connection_error', error);
     });
 
     // Disconnection
@@ -168,14 +168,14 @@ export class WebSocketService {
         this.scheduleReconnect();
       }
       
-      this.emit('disconnect', reason);
+      this.emitToListeners('disconnect', reason);
     });
 
     // Reconnection attempt
     this.socket.on('reconnect_attempt', (attemptNumber) => {
       console.log(`📱 WebSocket reconnection attempt ${attemptNumber}`);
       this.updateConnectionStatus({ reconnecting: true });
-      this.emit('reconnect_attempt', attemptNumber);
+      this.emitToListeners('reconnect_attempt', attemptNumber);
     });
 
     // Reconnection successful
@@ -188,7 +188,7 @@ export class WebSocketService {
         lastConnected: new Date(),
         error: undefined
       });
-      this.emit('reconnect', attemptNumber);
+      this.emitToListeners('reconnect', attemptNumber);
     });
 
     // Reconnection failed
@@ -198,48 +198,48 @@ export class WebSocketService {
         reconnecting: false,
         error: 'Reconnection failed after maximum attempts'
       });
-      this.emit('reconnect_failed');
+      this.emitToListeners('reconnect_failed');
     });
 
     // Heartbeat response
     this.socket.on('pong', (data) => {
       console.log('📱 Heartbeat pong received:', data);
-      this.emit('heartbeat', data);
+      this.emitToListeners('heartbeat', data);
     });
 
     // Queue updates
     this.socket.on('queue_update', (data) => {
       console.log('📱 Queue update received:', data);
-      this.emit('queue_update', data);
+      this.emitToListeners('queue_update', data);
     });
 
     // Position updates
     this.socket.on('position_update', (data) => {
       console.log('📱 Position update received:', data);
-      this.emit('position_update', data);
+      this.emitToListeners('position_update', data);
     });
 
     // Notification updates
     this.socket.on('notification', (data) => {
       console.log('📱 Notification received:', data);
-      this.emit('notification', data);
+      this.emitToListeners('notification', data);
     });
 
     // Room events
     this.socket.on('room-joined', (data) => {
       console.log('📱 Joined room:', data);
-      this.emit('room_joined', data);
+      this.emitToListeners('room_joined', data);
     });
 
     this.socket.on('room-left', (data) => {
       console.log('📱 Left room:', data);
-      this.emit('room_left', data);
+      this.emitToListeners('room_left', data);
     });
 
     // Error handling
     this.socket.on('error', (error) => {
       console.error('📱 WebSocket error:', error);
-      this.emit('error', error);
+      this.emitToListeners('error', error);
     });
   }
 
@@ -323,7 +323,7 @@ export class WebSocketService {
           reconnecting: false,
           error: 'Max reconnection attempts exceeded'
         });
-        this.emit('max_reconnect_attempts_exceeded');
+        this.emitToListeners('max_reconnect_attempts_exceeded');
       }
     }
   }
@@ -378,7 +378,7 @@ export class WebSocketService {
       reconnectAttempts: 0
     });
 
-    this.emit('manual_disconnect');
+    this.emitToListeners('manual_disconnect');
   }
 
   /**
@@ -469,7 +469,7 @@ export class WebSocketService {
   /**
    * Emit event to listeners
    */
-  private emit(event: string, data?: any): void {
+  private emitToListeners(event: string, data?: any): void {
     const callbacks = this.listeners.get(event);
     if (callbacks) {
       callbacks.forEach(callback => {
@@ -487,7 +487,7 @@ export class WebSocketService {
    */
   private updateConnectionStatus(updates: Partial<ConnectionStatus>): void {
     this.connectionStatus = { ...this.connectionStatus, ...updates };
-    this.emit('connection_status_changed', this.connectionStatus);
+    this.emitToListeners('connection_status_changed', this.connectionStatus);
   }
 
   /**
@@ -538,8 +538,8 @@ export class WebSocketService {
           resolve(true);
         };
 
-        this.socket.on('pong', pongHandler);
-        this.socket.emit('ping');
+        this.socket!.on('pong', pongHandler);
+        this.socket!.emit('ping');
       });
     }
 

@@ -1,326 +1,161 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { WebSocketService, ConnectionStatus, AuthData, getWebSocketService } from '../services/websocket-service';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { getWebSocketService, QueueUpdate } from '../services/websocket';
 
-export interface UseWebSocketOptions {
-  url: string;
-  authData: AuthData;
-  autoConnect?: boolean;
-  maxReconnectionAttempts?: number;
-  reconnectionDelay?: number;
+interface UseWebSocketOptions {
+  patientId?: string;
+  onPositionUpdate?: (data: QueueUpdate) => void;
+  onQueueUpdate?: (data: QueueUpdate) => void;
+  onStatusChange?: (data: QueueUpdate) => void;
 }
 
-export interface UseWebSocketReturn {
-  connectionStatus: ConnectionStatus;
-  isConnected: boolean;
-  connect: () => Promise<void>;
-  disconnect: () => void;
-  forceReconnect: () => Promise<void>;
-  emit: (event: string, data?: any) => void;
-  joinRoom: (room: string, patientId?: string) => void;
-  leaveRoom: (room: string) => void;
-  on: (event: string, callback: Function) => void;
-  off: (event: string, callback?: Function) => void;
+interface WebSocketState {
+  connected: boolean;
+  connecting: boolean;
+  reconnectAttempts: number;
+  error: string | null;
 }
 
-/**
- * React hook for WebSocket connection with automatic reconnection
- */
-export const useWebSocket = (options: UseWebSocketOptions): UseWebSocketReturn => {
-  const {
-    url,
-    authData,
-    autoConnect = true,
-    maxReconnectionAttempts = 5,
-    reconnectionDelay = 1000
-  } = options;
-
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
+export const useWebSocket = (options: UseWebSocketOptions = {}) => {
+  const { patientId, onPositionUpdate, onQueueUpdate, onStatusChange } = options;
+  
+  const [state, setState] = useState<WebSocketState>({
     connected: false,
     connecting: false,
-    reconnecting: false,
-    reconnectAttempts: 0
+    reconnectAttempts: 0,
+    error: null,
   });
 
-  const webSocketServiceRef = useRef<WebSocketService | null>(null);
-  const eventListenersRef = useRef<Map<string, Function[]>>(new Map());
+  const webSocketService = useRef(getWebSocketService());
+  const hasJoinedRoom = useRef(false);
 
-  // Initialize WebSocket service
-  useEffect(() => {
-    if (!webSocketServiceRef.current) {
-      webSocketServiceRef.current = getWebSocketService({
-        url,
-        autoConnect,
-        reconnectionAttempts: maxReconnectionAttempts,
-        reconnectionDelay,
-        reconnectionDelayMax: 5000,
-        timeout: 20000
-      });
-
-      // Set up connection status listener
-      webSocketServiceRef.current.on('connection_status_changed', (status: ConnectionStatus) => {
-        setConnectionStatus(status);
-      });
-    }
-  }, [url, autoConnect, maxReconnectionAttempts, reconnectionDelay]);
-
-  // Auto-connect on mount
-  useEffect(() => {
-    if (autoConnect && webSocketServiceRef.current && authData) {
-      connect();
-    }
-  }, [autoConnect, authData]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (webSocketServiceRef.current) {
-        webSocketServiceRef.current.cleanup();
-      }
-    };
+  const updateConnectionState = useCallback(() => {
+    const status = webSocketService.current.getConnectionStatus();
+    setState(prev => ({
+      ...prev,
+      connected: status.connected,
+      connecting: status.connecting,
+      reconnectAttempts: status.reconnectAttempts,
+    }));
   }, []);
 
-  const connect = useCallback(async () => {
-    if (!webSocketServiceRef.current) {
-      throw new Error('WebSocket service not initialized');
+  const handleConnect = useCallback(() => {
+    console.log('🌐 WebSocket connected');
+    setState(prev => ({ ...prev, connected: true, connecting: false, error: null }));
+    
+    // Join patient room if patientId is provided and not already joined
+    if (patientId && !hasJoinedRoom.current) {
+      webSocketService.current.joinPatientRoom(patientId);
+      hasJoinedRoom.current = true;
+    }
+  }, [patientId]);
+
+  const handleDisconnect = useCallback(() => {
+    console.log('🌐 WebSocket disconnected');
+    setState(prev => ({ ...prev, connected: false, connecting: false }));
+    hasJoinedRoom.current = false;
+  }, []);
+
+  const handleConnectionError = useCallback((error: Error) => {
+    console.error('🌐 WebSocket connection error:', error);
+    setState(prev => ({ 
+      ...prev, 
+      connected: false, 
+      connecting: false, 
+      error: error.message 
+    }));
+  }, []);
+
+  const handlePositionUpdate = useCallback((data: QueueUpdate) => {
+    console.log('🌐 Position update received:', data);
+    onPositionUpdate?.(data);
+  }, [onPositionUpdate]);
+
+  const handleQueueUpdate = useCallback((data: QueueUpdate) => {
+    console.log('🌐 Queue update received:', data);
+    onQueueUpdate?.(data);
+  }, [onQueueUpdate]);
+
+  const handleStatusChange = useCallback((data: QueueUpdate) => {
+    console.log('🌐 Status change received:', data);
+    onStatusChange?.(data);
+  }, [onStatusChange]);
+
+  // Setup WebSocket connection and event listeners
+  useEffect(() => {
+    const ws = webSocketService.current;
+
+    // Set up event listeners
+    ws.onConnect(handleConnect);
+    ws.onDisconnect(handleDisconnect);
+    ws.onConnectionError(handleConnectionError);
+    ws.onPositionUpdate(handlePositionUpdate);
+    ws.onQueueUpdate(handleQueueUpdate);
+    ws.onStatusChange(handleStatusChange);
+
+    // Update initial state
+    updateConnectionState();
+
+    // Join patient room if connected and patientId is provided
+    if (patientId && ws.isConnected() && !hasJoinedRoom.current) {
+      ws.joinPatientRoom(patientId);
+      hasJoinedRoom.current = true;
     }
 
-    try {
-      await webSocketServiceRef.current.connect(authData);
-      
-      // Store auth data for automatic reconnection
-      webSocketServiceRef.current.storeAuthData(authData);
-      
-    } catch (error) {
-      console.error('🌐 Failed to connect WebSocket:', error);
-      throw error;
+    // Cleanup function
+    return () => {
+      if (patientId && hasJoinedRoom.current) {
+        ws.leavePatientRoom(patientId);
+        hasJoinedRoom.current = false;
+      }
+    };
+  }, [
+    patientId,
+    handleConnect,
+    handleDisconnect,
+    handleConnectionError,
+    handlePositionUpdate,
+    handleQueueUpdate,
+    handleStatusChange,
+    updateConnectionState,
+  ]);
+
+  // Handle patientId changes
+  useEffect(() => {
+    const ws = webSocketService.current;
+    
+    if (patientId && ws.isConnected() && !hasJoinedRoom.current) {
+      ws.joinPatientRoom(patientId);
+      hasJoinedRoom.current = true;
     }
-  }, [authData]);
+  }, [patientId]);
+
+  const reconnect = useCallback(() => {
+    setState(prev => ({ ...prev, connecting: true, error: null }));
+    webSocketService.current.connect();
+  }, []);
 
   const disconnect = useCallback(() => {
-    if (webSocketServiceRef.current) {
-      webSocketServiceRef.current.disconnect();
+    if (patientId && hasJoinedRoom.current) {
+      webSocketService.current.leavePatientRoom(patientId);
+      hasJoinedRoom.current = false;
     }
-  }, []);
-
-  const forceReconnect = useCallback(async () => {
-    if (!webSocketServiceRef.current) {
-      throw new Error('WebSocket service not initialized');
-    }
-
-    try {
-      await webSocketServiceRef.current.forceReconnect();
-    } catch (error) {
-      console.error('🌐 Failed to force reconnect:', error);
-      throw error;
-    }
-  }, []);
-
-  const emit = useCallback((event: string, data?: any) => {
-    if (webSocketServiceRef.current) {
-      webSocketServiceRef.current.emit(event, data);
-    }
-  }, []);
-
-  const joinRoom = useCallback((room: string, patientId?: string) => {
-    if (webSocketServiceRef.current) {
-      webSocketServiceRef.current.joinRoom(room, patientId);
-    }
-  }, []);
-
-  const leaveRoom = useCallback((room: string) => {
-    if (webSocketServiceRef.current) {
-      webSocketServiceRef.current.leaveRoom(room);
-    }
-  }, []);
-
-  const on = useCallback((event: string, callback: Function) => {
-    if (webSocketServiceRef.current) {
-      webSocketServiceRef.current.on(event, callback);
-      
-      // Track listeners for cleanup
-      if (!eventListenersRef.current.has(event)) {
-        eventListenersRef.current.set(event, []);
-      }
-      eventListenersRef.current.get(event)!.push(callback);
-    }
-  }, []);
-
-  const off = useCallback((event: string, callback?: Function) => {
-    if (webSocketServiceRef.current) {
-      webSocketServiceRef.current.off(event, callback);
-      
-      // Clean up tracking
-      if (callback) {
-        const listeners = eventListenersRef.current.get(event);
-        if (listeners) {
-          const index = listeners.indexOf(callback);
-          if (index > -1) {
-            listeners.splice(index, 1);
-          }
-        }
-      } else {
-        eventListenersRef.current.delete(event);
-      }
-    }
-  }, []);
+    webSocketService.current.disconnect();
+    setState({
+      connected: false,
+      connecting: false,
+      reconnectAttempts: 0,
+      error: null,
+    });
+  }, [patientId]);
 
   return {
-    connectionStatus,
-    isConnected: connectionStatus.connected,
-    connect,
+    ...state,
+    reconnect,
     disconnect,
-    forceReconnect,
-    emit,
-    joinRoom,
-    leaveRoom,
-    on,
-    off
+    isConnected: state.connected,
   };
 };
 
-/**
- * Hook for queue-specific WebSocket functionality
- */
-export const useQueueWebSocket = (patientId: string, apiUrl: string) => {
-  const webSocket = useWebSocket({
-    url: apiUrl,
-    authData: {
-      patientId,
-      userType: 'patient'
-    },
-    autoConnect: true
-  });
-
-  const [queuePosition, setQueuePosition] = useState<number | null>(null);
-  const [estimatedWait, setEstimatedWait] = useState<number | null>(null);
-  const [queueStatus, setQueueStatus] = useState<string>('waiting');
-
-  useEffect(() => {
-    // Listen for queue updates
-    const handleQueueUpdate = (data: any) => {
-      console.log('🌐 Queue update received:', data);
-      if (data.patientId === patientId) {
-        setQueuePosition(data.position);
-        setEstimatedWait(data.estimatedWait);
-        setQueueStatus(data.status || 'waiting');
-      }
-    };
-
-    const handlePositionUpdate = (data: any) => {
-      console.log('🌐 Position update received:', data);
-      setQueuePosition(data.position);
-      setEstimatedWait(data.estimatedWait);
-    };
-
-    const handleNotification = (data: any) => {
-      console.log('🌐 Notification received:', data);
-      // Handle notifications (could trigger browser notifications)
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('SmartWait Update', {
-          body: data.message || 'Queue status updated',
-          icon: '/favicon.ico'
-        });
-      }
-    };
-
-    // Set up event listeners
-    webSocket.on('queue_update', handleQueueUpdate);
-    webSocket.on('position_update', handlePositionUpdate);
-    webSocket.on('notification', handleNotification);
-
-    // Join patient-specific room when connected
-    if (webSocket.isConnected) {
-      webSocket.joinRoom(`patient_${patientId}`, patientId);
-      webSocket.joinRoom('patients');
-    }
-
-    // Cleanup listeners
-    return () => {
-      webSocket.off('queue_update', handleQueueUpdate);
-      webSocket.off('position_update', handlePositionUpdate);
-      webSocket.off('notification', handleNotification);
-    };
-  }, [webSocket, patientId]);
-
-  // Auto-join rooms when connection is established
-  useEffect(() => {
-    const handleConnectionStatusChange = (status: ConnectionStatus) => {
-      if (status.connected) {
-        webSocket.joinRoom(`patient_${patientId}`, patientId);
-        webSocket.joinRoom('patients');
-      }
-    };
-
-    webSocket.on('connection_status_changed', handleConnectionStatusChange);
-
-    return () => {
-      webSocket.off('connection_status_changed', handleConnectionStatusChange);
-    };
-  }, [webSocket, patientId]);
-
-  return {
-    ...webSocket,
-    queuePosition,
-    estimatedWait,
-    queueStatus
-  };
-};
-
-/**
- * Hook for staff WebSocket functionality
- */
-export const useStaffWebSocket = (token: string, apiUrl: string) => {
-  const webSocket = useWebSocket({
-    url: apiUrl,
-    authData: {
-      token,
-      userType: 'staff'
-    },
-    autoConnect: true
-  });
-
-  const [queueData, setQueueData] = useState<any[]>([]);
-
-  useEffect(() => {
-    // Listen for queue updates
-    const handleQueueUpdate = (data: any) => {
-      console.log('🌐 Staff queue update received:', data);
-      setQueueData(data.queue || []);
-    };
-
-    // Set up event listeners
-    webSocket.on('queue_update', handleQueueUpdate);
-
-    // Join staff room when connected
-    if (webSocket.isConnected) {
-      webSocket.joinRoom('staff');
-    }
-
-    // Cleanup listeners
-    return () => {
-      webSocket.off('queue_update', handleQueueUpdate);
-    };
-  }, [webSocket]);
-
-  // Auto-join staff room when connection is established
-  useEffect(() => {
-    const handleConnectionStatusChange = (status: ConnectionStatus) => {
-      if (status.connected) {
-        webSocket.joinRoom('staff');
-      }
-    };
-
-    webSocket.on('connection_status_changed', handleConnectionStatusChange);
-
-    return () => {
-      webSocket.off('connection_status_changed', handleConnectionStatusChange);
-    };
-  }, [webSocket]);
-
-  return {
-    ...webSocket,
-    queueData
-  };
-};
+export default useWebSocket;
