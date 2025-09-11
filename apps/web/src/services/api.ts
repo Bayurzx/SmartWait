@@ -22,7 +22,14 @@ class ApiService {
         throw new Error(errorData.error.message || `HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const result = await response.json();
+      
+      // If the response has a 'data' property, return that; otherwise return the whole response
+      if (result && typeof result === 'object' && 'data' in result) {
+        return result.data;
+      }
+      
+      return result;
     } catch (error) {
       if (error instanceof Error) {
         throw error;

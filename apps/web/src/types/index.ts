@@ -36,8 +36,11 @@ export interface CheckInResponse {
 export interface QueueStatus {
   patientId: string;
   position: number;
-  estimatedWait: number;
-  status: 'waiting' | 'called' | 'completed';
+  estimatedWaitMinutes: number;
+  status: 'waiting' | 'called' | 'completed' | 'no_show';
+  checkInTime: string;
+  calledAt?: string;
+  completedAt?: string;
 }
 
 export interface ValidationError {

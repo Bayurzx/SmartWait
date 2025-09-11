@@ -14,6 +14,7 @@ import { initializeSocketIO, getSocketIOHealth } from './config/socket';
 import healthRoutes from './routes/health';
 import queueRoutes from './routes/queue';
 import staffRoutes from './routes/staff';
+import checkinHistoryRoutes from './routes/checkin-history';
 
 const app = express();
 const httpServer = createServer(app);
@@ -34,6 +35,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/health', healthRoutes);
 app.use('/api', queueRoutes);
 app.use('/api/staff', staffRoutes);
+app.use('/api/v1/checkin-history', checkinHistoryRoutes);
 
 // Basic route
 app.get('/', (_req, res) => {

@@ -36,11 +36,11 @@ model QueuePosition {
   // Relations
   patient Patient @relation(fields: [patientId], references: [id])
 
-  // Constraints
-  @@map("queue_positions")
-
   // Note: Partial unique index on `position` where status IN ('waiting', 'called')
   // is created manually in migration SQL and not represented in Prisma schema
+
+  // Constraints
+  @@map("queue_positions")
 }
 
 model StaffSession {
@@ -66,4 +66,21 @@ model SmsNotification {
   patient Patient @relation(fields: [patientId], references: [id])
 
   @@map("sms_notifications")
+}
+
+model SavedCheckin {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  patientId    String   @map("patient_id") @db.Uuid
+  deviceId     String   @map("device_id") @db.VarChar(255)
+  patientName  String?  @map("patient_name") @db.VarChar(255)
+  facilityName String?  @default("SmartWait Clinic") @map("facility_name") @db.VarChar(255)
+  checkinTime  DateTime @map("checkin_time")
+  lastAccessed DateTime @default(now()) @map("last_accessed")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Unique constraint to prevent duplicate entries per device
+  @@unique([patientId, deviceId])
+  @@map("saved_checkins")
 }

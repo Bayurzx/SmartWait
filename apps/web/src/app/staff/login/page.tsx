@@ -28,13 +28,13 @@ export default function StaffLoginPage() {
     setError(null);
 
     const result = await login(credentials);
-    
+
     if (result.success) {
       router.push('/staff/dashboard');
     } else {
       setError(result.error || 'Login failed');
     }
-    
+
     setLoading(false);
   };
 
@@ -127,11 +127,10 @@ export default function StaffLoginPage() {
             <button
               type="submit"
               disabled={loading || !credentials.username || !credentials.password}
-              className={`w-full py-3 px-4 rounded-md text-white font-medium transition-colors ${
-                loading || !credentials.username || !credentials.password
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
-              }`}
+              className={`w-full py-3 px-4 rounded-md text-white font-medium transition-colors ${loading || !credentials.username || !credentials.password
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2'
+                }`}
             >
               {loading ? (
                 <div className="flex items-center justify-center space-x-2">
@@ -147,17 +146,25 @@ export default function StaffLoginPage() {
           {/* Demo Credentials */}
           <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h3 className="text-sm font-medium text-blue-900 mb-2">Demo Credentials</h3>
-            <div className="text-sm text-blue-800 space-y-1">
-              <p><strong>Username:</strong> staff</p>
-              <p><strong>Password:</strong> password123</p>
+            <div className="text-sm text-blue-800 space-y-2">
+              <div>
+                <p><strong>Staff Login:</strong></p>
+                <p>Username: <code className="bg-blue-100 px-1 rounded">staff</code></p>
+                <p>Password: <code className="bg-blue-100 px-1 rounded">smartwait2024</code></p>
+              </div>
+              <div>
+                <p><strong>Admin Login:</strong></p>
+                <p>Username: <code className="bg-blue-100 px-1 rounded">admin</code></p>
+                <p>Password: <code className="bg-blue-100 px-1 rounded">admin2024</code></p>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Navigation Links */}
         <div className="text-center">
-          <a 
-            href="/" 
+          <a
+            href="/"
             className="text-sm text-blue-600 hover:text-blue-500"
           >
             ← Back to Patient Portal

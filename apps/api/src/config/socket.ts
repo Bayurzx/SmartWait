@@ -96,38 +96,52 @@ export const initializeSocketIO = async (httpServer: HTTPServer): Promise<Socket
 const authenticateSocket = async (socket: any, next: any) => {
   try {
     const token = socket.handshake.auth?.token || socket.handshake.query?.token;
-    
-    if (!token) {
-      return next(new Error('Authentication token required'));
-    }
-
-    // Validate session token for staff
-    const sessionData = await authService.validateSession(token);
-    
-    if (sessionData) {
-      // Staff authentication successful
-      socket.userId = sessionData.user.id;
-      socket.userType = 'staff';
-      socket.username = sessionData.user.username;
-      socket.role = sessionData.user.role;
-      socket.authenticated = true;
-      
-      console.log(`🔐 Staff authenticated: ${sessionData.user.username} (${sessionData.user.role})`);
-      return next();
-    }
-
-    // For patients, we'll use a simpler validation (patientId from check-in)
-    // In a real implementation, you might want to use JWT tokens for patients too
     const patientId = socket.handshake.auth?.patientId || socket.handshake.query?.patientId;
     
+    // Try staff authentication first if token is provided
+    if (token) {
+      try {
+        const sessionData = await authService.validateSession(token);
+        
+        if (sessionData) {
+          // Staff authentication successful
+          socket.userId = sessionData.user.id;
+          socket.userType = 'staff';
+          socket.username = sessionData.user.username;
+          socket.role = sessionData.user.role;
+          socket.authenticated = true;
+          
+          console.log(`🔐 Staff authenticated: ${sessionData.user.username} (${sessionData.user.role})`);
+          return next();
+        }
+      } catch (error) {
+        console.error('❌ Staff token validation failed:', error);
+        // Continue to patient authentication if staff auth fails
+      }
+    }
+
+    // Try patient authentication if patientId is provided
     if (patientId && typeof patientId === 'string' && patientId.length > 0) {
-      // Basic patient validation - in production, validate against database
-      socket.userId = patientId;
-      socket.userType = 'patient';
-      socket.authenticated = true;
+      // Basic patient ID validation - check format (UUID-like)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       
-      console.log(`🔐 Patient authenticated: ${patientId}`);
-      return next();
+      if (uuidRegex.test(patientId)) {
+        // Patient authentication successful
+        socket.userId = patientId;
+        socket.userType = 'patient';
+        socket.authenticated = true;
+        
+        console.log(`🔐 Patient authenticated: ${patientId}`);
+        return next();
+      } else {
+        console.error(`❌ Invalid patient ID format: ${patientId}`);
+        return next(new Error('Invalid patient ID format'));
+      }
+    }
+
+    // No valid authentication provided
+    if (!token && !patientId) {
+      return next(new Error('Authentication required: provide either token (staff) or patientId (patient)'));
     }
 
     return next(new Error('Invalid authentication credentials'));

@@ -11,7 +11,7 @@ export default function StatusPage() {
   const params = useParams();
   const router = useRouter();
   const patientId = params.id as string;
-  
+
   const [queueStatus, setQueueStatus] = useState<QueueStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +30,7 @@ export default function StatusPage() {
       setQueueStatus(prev => prev ? {
         ...prev,
         position: data.position || prev.position,
-        estimatedWait: data.estimatedWait || prev.estimatedWait,
+        estimatedWaitMinutes: data.estimatedWait || prev.estimatedWaitMinutes,
         status: (data.status as any) || prev.status,
       } : null);
       setLastUpdated(new Date());
@@ -45,7 +45,7 @@ export default function StatusPage() {
         ...prev,
         status: (data.status as any) || prev.status,
         position: data.position || prev.position,
-        estimatedWait: data.estimatedWait || prev.estimatedWait,
+        estimatedWaitMinutes: data.estimatedWait || prev.estimatedWaitMinutes,
       } : null);
       setLastUpdated(new Date());
       setError(null);
@@ -67,7 +67,7 @@ export default function StatusPage() {
     }
 
     fetchQueueStatus();
-    
+
     // Set up polling as fallback (less frequent when WebSocket is connected)
     const pollInterval = webSocket.connected ? 30000 : 10000; // 30s if WS connected, 10s if not
     const interval = setInterval(fetchQueueStatus, pollInterval);
@@ -77,7 +77,9 @@ export default function StatusPage() {
 
   const fetchQueueStatus = async () => {
     try {
+      console.log('Fetching queue status for patient:', patientId);
       const data = await apiService.getQueueStatus(patientId);
+      console.log('Queue status received:', data);
       setQueueStatus(data);
       setLastUpdated(new Date());
       setError(null);
@@ -102,6 +104,8 @@ export default function StatusPage() {
         return 'text-green-600';
       case 'completed':
         return 'text-gray-600';
+      case 'no_show':
+        return 'text-red-600';
       default:
         return 'text-gray-600';
     }
@@ -115,8 +119,11 @@ export default function StatusPage() {
         return 'Please come to the front desk now!';
       case 'completed':
         return 'Your visit is complete';
+      case 'no_show':
+        return 'Marked as no-show';
       default:
-        return 'Unknown status';
+        console.log('Unknown status received:', status);
+        return `Status: ${status}`;
     }
   };
 
@@ -174,17 +181,15 @@ export default function StatusPage() {
 
         {/* Connection Status */}
         <div className="mb-4">
-          <div className={`flex items-center justify-center space-x-2 text-sm ${
-            webSocket.connected ? 'text-green-600' : 
-            webSocket.connecting ? 'text-yellow-600' : 'text-red-600'
-          }`}>
-            <div className={`w-2 h-2 rounded-full ${
-              webSocket.connected ? 'bg-green-500' : 
-              webSocket.connecting ? 'bg-yellow-500' : 'bg-red-500'
-            }`}></div>
+          <div className={`flex items-center justify-center space-x-2 text-sm ${webSocket.connected ? 'text-green-600' :
+              webSocket.connecting ? 'text-yellow-600' : 'text-red-600'
+            }`}>
+            <div className={`w-2 h-2 rounded-full ${webSocket.connected ? 'bg-green-500' :
+                webSocket.connecting ? 'bg-yellow-500' : 'bg-red-500'
+              }`}></div>
             <span>
-              {webSocket.connected ? 'Real-time Connected' : 
-               webSocket.connecting ? 'Connecting...' : 'Disconnected'}
+              {webSocket.connected ? 'Real-time Connected' :
+                webSocket.connecting ? 'Connecting...' : 'Disconnected'}
             </span>
             {webSocket.reconnectAttempts > 0 && (
               <span className="text-xs text-gray-500">
@@ -201,20 +206,18 @@ export default function StatusPage() {
 
         {/* Queue Status Card */}
         {queueStatus && (
-          <div className={`bg-white rounded-lg shadow-md p-6 mb-6 transition-all duration-500 ${
-            updateAnimation ? 'ring-2 ring-blue-500 ring-opacity-50 scale-105' : ''
-          }`}>
+          <div className={`bg-white rounded-lg shadow-md p-6 mb-6 transition-all duration-500 ${updateAnimation ? 'ring-2 ring-blue-500 ring-opacity-50 scale-105' : ''
+            }`}>
             <div className="text-center">
-              <div className={`text-6xl font-bold mb-4 transition-all duration-300 ${
-                getStatusColor(queueStatus.status)
-              } ${updateAnimation ? 'scale-110' : ''}`}>
+              <div className={`text-6xl font-bold mb-4 transition-all duration-300 ${getStatusColor(queueStatus.status)
+                } ${updateAnimation ? 'scale-110' : ''}`}>
                 {queueStatus.position}
               </div>
-              
+
               <h2 className="text-xl font-semibold text-gray-900 mb-2">
                 Your Position in Queue
               </h2>
-              
+
               <p className={`text-lg mb-4 ${getStatusColor(queueStatus.status)}`}>
                 {getStatusMessage(queueStatus.status)}
               </p>
@@ -222,7 +225,7 @@ export default function StatusPage() {
               {queueStatus.status === 'waiting' && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                   <p className="text-blue-800 font-medium">
-                    Estimated wait time: {queueStatus.estimatedWait} minutes
+                    Estimated wait time: {queueStatus.estimatedWaitMinutes} minutes
                   </p>
                   <p className="text-blue-600 text-sm mt-1">
                     We'll notify you when it's almost your turn
@@ -274,12 +277,19 @@ export default function StatusPage() {
               )}
             </button>
           )}
-          
+
           <a
             href="/checkin"
             className="block w-full btn btn-secondary text-center"
           >
             New Check-In
+          </a>
+
+          <a
+            href="/checkin/saved"
+            className="block w-full text-center text-sm text-gray-500 hover:text-gray-700 py-2"
+          >
+            View Saved Check-ins
           </a>
         </div>
 
