@@ -25,12 +25,9 @@ export interface Patient {
 }
 
 export interface CheckInResponse {
-  success: boolean;
-  data: {
-    patientId: string;
-    position: number;
-    estimatedWait: number;
-  };
+  patientId: string;
+  position: number;
+  estimatedWait: number;
 }
 
 export interface QueueStatus {

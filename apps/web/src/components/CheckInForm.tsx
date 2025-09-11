@@ -68,7 +68,7 @@ export const CheckInForm: React.FC<CheckInFormProps> = ({ onSubmit, loading = fa
 
   const handleFieldChange = (field: keyof CheckInData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -77,7 +77,7 @@ export const CheckInForm: React.FC<CheckInFormProps> = ({ onSubmit, loading = fa
 
   const handleFieldBlur = (field: keyof CheckInData) => {
     setTouched(prev => ({ ...prev, [field]: true }));
-    
+
     // Validate field on blur
     const error = validateField(field, formData[field]);
     if (error) {
@@ -88,7 +88,7 @@ export const CheckInForm: React.FC<CheckInFormProps> = ({ onSubmit, loading = fa
   const formatPhoneNumber = (value: string): string => {
     // Remove all non-digit characters
     const digitsOnly = value.replace(/\D/g, '');
-    
+
     // Format as (XXX) XXX-XXXX
     if (digitsOnly.length <= 3) {
       return digitsOnly;
@@ -106,7 +106,7 @@ export const CheckInForm: React.FC<CheckInFormProps> = ({ onSubmit, loading = fa
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Mark all fields as touched
     setTouched({
       name: true,
@@ -152,11 +152,10 @@ export const CheckInForm: React.FC<CheckInFormProps> = ({ onSubmit, loading = fa
             onChange={(e) => handleFieldChange('name', e.target.value)}
             onBlur={() => handleFieldBlur('name')}
             disabled={loading}
-            className={`input w-full ${
-              isFieldInvalid('name') 
-                ? 'border-red-500 bg-red-50 focus-visible:ring-red-500' 
-                : ''
-            }`}
+            className={`input w-full ${isFieldInvalid('name')
+              ? 'border-red-500 bg-red-50 focus-visible:ring-red-500'
+              : ''
+              }`}
             autoComplete="name"
           />
           {isFieldInvalid('name') && (
@@ -177,11 +176,10 @@ export const CheckInForm: React.FC<CheckInFormProps> = ({ onSubmit, loading = fa
             onChange={(e) => handlePhoneChange(e.target.value)}
             onBlur={() => handleFieldBlur('phone')}
             disabled={loading}
-            className={`input w-full ${
-              isFieldInvalid('phone') 
-                ? 'border-red-500 bg-red-50 focus-visible:ring-red-500' 
-                : ''
-            }`}
+            className={`input w-full ${isFieldInvalid('phone')
+              ? 'border-red-500 bg-red-50 focus-visible:ring-red-500'
+              : ''
+              }`}
             autoComplete="tel"
           />
           {isFieldInvalid('phone') && (
@@ -202,11 +200,10 @@ export const CheckInForm: React.FC<CheckInFormProps> = ({ onSubmit, loading = fa
             onChange={(e) => handleFieldChange('appointmentTime', e.target.value)}
             onBlur={() => handleFieldBlur('appointmentTime')}
             disabled={loading}
-            className={`input w-full ${
-              isFieldInvalid('appointmentTime') 
-                ? 'border-red-500 bg-red-50 focus-visible:ring-red-500' 
-                : ''
-            }`}
+            className={`input w-full ${isFieldInvalid('appointmentTime')
+              ? 'border-red-500 bg-red-50 focus-visible:ring-red-500'
+              : ''
+              }`}
           />
           {isFieldInvalid('appointmentTime') && (
             <p className="text-red-500 text-sm mt-1">{errors.appointmentTime}</p>
@@ -220,11 +217,10 @@ export const CheckInForm: React.FC<CheckInFormProps> = ({ onSubmit, loading = fa
         <button
           type="submit"
           disabled={loading}
-          className={`w-full py-3 px-4 rounded-md text-white font-medium transition-colors ${
-            loading
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2'
-          }`}
+          className={`w-full py-3 px-4 rounded-md text-white font-medium transition-colors ${loading
+            ? 'bg-gray-400 cursor-not-allowed'
+            : 'bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2'
+            }`}
         >
           {loading ? (
             <div className="flex items-center justify-center space-x-2">

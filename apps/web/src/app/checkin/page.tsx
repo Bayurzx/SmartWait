@@ -52,14 +52,15 @@ export default function CheckInPage() {
     try {
       const result = await apiService.checkIn(data);
       
-      if (result.success) {
+      // With the updated API service, result is now the data directly
+      if (result && result.patientId) {
         // Store patient ID in localStorage for status checking
-        localStorage.setItem('patientId', result.data.patientId);
+        localStorage.setItem('patientId', result.patientId);
         
         // Save check-in to history for future reference
         try {
           await checkinHistoryService.saveCheckin({
-            patientId: result.data.patientId,
+            patientId: result.patientId,
             deviceId: checkinHistoryService.getDeviceId(),
             patientName: smartNameFormat(data.name),
             facilityName: 'SmartWait Clinic'
@@ -70,9 +71,9 @@ export default function CheckInPage() {
         }
         
         // Navigate to status page
-        router.push(`/status/${result.data.patientId}`);
+        router.push(`/status/${result.patientId}`);
       } else {
-        throw new Error('Check-in failed');
+        throw new Error('Check-in failed - no patient ID received');
       }
     } catch (err) {
       console.error('Check-in error:', err);
