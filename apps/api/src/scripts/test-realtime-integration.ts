@@ -1,6 +1,6 @@
 import { createServer } from 'http';
 import { initializeSocketIO, shutdownSocketIO } from '../config/socket';
-import RealtimeService from '../services/realtime-service';
+import { realtimeService } from '../services/realtime-service';
 
 async function testRealtimeIntegration() {
   console.log('🧪 Testing Real-time Service Integration...');
@@ -19,38 +19,54 @@ async function testRealtimeIntegration() {
       // Test real-time service methods
       console.log('📡 Testing real-time service methods...');
       
-      // Test queue update broadcast
-      RealtimeService.broadcastQueueUpdate({
-        type: 'position_change',
-        patientId: 'test-patient-123',
-        newPosition: 2,
-        estimatedWait: 10,
-        timestamp: new Date().toISOString()
-      });
+      // Test patient check-in broadcast
+      realtimeService.broadcastPatientCheckedIn(
+        'test-patient-123',
+        'John Doe',
+        2,
+        10,
+        3,
+        new Date(),
+        '2:30 PM'
+      );
       
-      // Test patient position notification
-      RealtimeService.notifyPatientPositionChange('test-patient-456', 1, 5);
+      // Test queue position update
+      realtimeService.broadcastQueuePositionUpdate(
+        'test-patient-456',
+        3,
+        1,
+        5,
+        3,
+        'patient_completed'
+      );
       
       // Test patient called notification
-      RealtimeService.notifyPatientCalled('test-patient-789', 'Your turn!');
+      realtimeService.broadcastPatientCalled(
+        'test-patient-789',
+        'Jane Smith',
+        1,
+        'staff',
+        2
+      );
       
-      // Test get ready notification
-      RealtimeService.notifyPatientGetReady('test-patient-ready', 15);
+      // Test patient completed
+      realtimeService.broadcastPatientCompleted(
+        'test-patient-completed',
+        'staff',
+        15,
+        10,
+        1
+      );
       
-      // Test staff notifications
-      RealtimeService.notifyStaffNewPatient({
-        id: 'new-patient',
-        name: 'John Doe',
-        position: 3
-      });
-      
-      RealtimeService.broadcastQueueRefresh([
-        { id: '1', name: 'Patient 1', position: 1 },
-        { id: '2', name: 'Patient 2', position: 2 }
-      ]);
+      // Test staff joined
+      realtimeService.broadcastStaffJoined(
+        'staff-123',
+        'Dr. Smith',
+        'doctor'
+      );
       
       // Test health status
-      const health = RealtimeService.getHealthStatus();
+      const health = realtimeService.getHealthStatus();
       console.log('📊 Real-time service health:', health);
       
       console.log('✅ All real-time service methods tested successfully');

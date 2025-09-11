@@ -27,15 +27,25 @@ class WebSocketService {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
   private isConnecting = false;
+  private patientId: string | null = null;
 
   constructor() {
-    if (typeof window !== 'undefined') {
-      this.connect();
-    }
+    // Don't auto-connect in constructor - wait for patientId
   }
 
-  connect(): void {
+  connect(patientId?: string): void {
     if (this.isConnecting || this.socket?.connected) {
+      return;
+    }
+
+    // Store patientId for reconnections
+    if (patientId) {
+      this.patientId = patientId;
+    }
+
+    // Don't connect without patientId for authentication
+    if (!this.patientId) {
+      console.warn('🌐 Cannot connect WebSocket without patientId for authentication');
       return;
     }
 
@@ -46,6 +56,9 @@ class WebSocketService {
       transports: ['websocket', 'polling'],
       timeout: 20000,
       forceNew: true,
+      auth: {
+        patientId: this.patientId
+      }
     });
 
     this.setupEventListeners();
@@ -58,6 +71,10 @@ class WebSocketService {
       console.log('🌐 Connected to WebSocket server');
       this.isConnecting = false;
       this.reconnectAttempts = 0;
+    });
+
+    this.socket.on('authenticated', (data) => {
+      console.log('🌐 WebSocket authenticated successfully:', data);
     });
 
     this.socket.on('disconnect', (reason) => {
@@ -75,6 +92,12 @@ class WebSocketService {
     this.socket.on('connect_error', (error) => {
       console.error('🌐 WebSocket connection error:', error);
       this.isConnecting = false;
+      
+      // Check if it's an authentication error
+      if (error.message.includes('Authentication')) {
+        console.error('🌐 Authentication failed - patientId may be invalid:', this.patientId);
+      }
+      
       this.scheduleReconnect();
     });
   }
@@ -92,7 +115,7 @@ class WebSocketService {
     
     setTimeout(() => {
       if (!this.socket?.connected) {
-        this.connect();
+        this.connect(); // Will use stored patientId
       }
     }, delay);
   }
@@ -162,6 +185,7 @@ class WebSocketService {
     }
     this.isConnecting = false;
     this.reconnectAttempts = 0;
+    this.patientId = null; // Clear stored patientId
   }
 
   isConnected(): boolean {
@@ -184,10 +208,16 @@ class WebSocketService {
 // Create a singleton instance
 let webSocketService: WebSocketService | null = null;
 
-export const getWebSocketService = (): WebSocketService => {
+export const getWebSocketService = (patientId?: string): WebSocketService => {
   if (!webSocketService && typeof window !== 'undefined') {
     webSocketService = new WebSocketService();
   }
+  
+  // Connect with patientId if provided and not already connected
+  if (webSocketService && patientId && !webSocketService.isConnected()) {
+    webSocketService.connect(patientId);
+  }
+  
   return webSocketService!;
 };
 

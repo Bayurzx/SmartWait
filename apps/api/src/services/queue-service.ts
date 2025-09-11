@@ -9,7 +9,7 @@ import {
 import { Prisma } from '@prisma/client';
 import Joi from 'joi';
 import { notificationService } from './notification-service';
-import RealtimeService from './realtime-service';
+import { realtimeService } from './realtime-service';
 
 type PrismaQueuePosition = {
     id: string;
@@ -174,24 +174,16 @@ export class QueueService {
 
       // Broadcast real-time updates
       try {
-        // Notify staff of new patient
-        RealtimeService.notifyStaffNewPatient({
-          id: queuePosition.patient.id,
-          name: queuePosition.patient.name,
-          phone: queuePosition.patient.phone,
-          position: queuePosition.position,
-          estimatedWait: queuePosition.estimatedWaitMinutes || 0,
-          checkInTime: queuePosition.checkInTime
-        });
-
-        // Broadcast queue update to all patients
-        RealtimeService.broadcastQueueUpdate({
-          type: 'position_change',
-          patientId: queuePosition.patient.id,
-          newPosition: queuePosition.position,
-          estimatedWait: queuePosition.estimatedWaitMinutes || 0,
-          timestamp: new Date().toISOString()
-        });
+        // Broadcast patient check-in event
+        realtimeService.broadcastPatientCheckedIn(
+          queuePosition.patient.id,
+          queuePosition.patient.name,
+          queuePosition.position,
+          queuePosition.estimatedWaitMinutes || 0,
+          queuePosition.position, // totalInQueue (using position as approximation)
+          queuePosition.checkInTime,
+          appointmentTime
+        );
 
         console.log(`📡 Real-time updates sent for new patient: ${queuePosition.patient.name}`);
       } catch (realtimeError) {
@@ -347,19 +339,17 @@ export class QueueService {
 
       // Broadcast real-time updates
       try {
-        // Notify the specific patient they are being called
-        RealtimeService.notifyPatientCalled(
+        // Get current queue size for the broadcast
+        const currentQueue = await this.getQueue();
+        
+        // Broadcast patient called event
+        realtimeService.broadcastPatientCalled(
           nextPatient.patient.id,
-          `${nextPatient.patient.name}, it's your turn! Please come to the front desk now.`
+          nextPatient.patient.name,
+          nextPatient.position,
+          'staff', // calledBy - could be enhanced to track actual staff member
+          currentQueue.length
         );
-
-        // Broadcast queue update to all patients and staff
-        RealtimeService.broadcastQueueUpdate({
-          type: 'patient_called',
-          patientId: nextPatient.patient.id,
-          newPosition: nextPatient.position,
-          timestamp: new Date().toISOString()
-        });
 
         console.log(`📡 Real-time updates sent for called patient: ${nextPatient.patient.name}`);
       } catch (realtimeError) {
@@ -420,24 +410,34 @@ export class QueueService {
 
       // Broadcast real-time updates
       try {
-        // Broadcast queue update to all patients and staff about patient completion
-        RealtimeService.broadcastQueueUpdate({
-          type: 'patient_completed',
-          patientId,
-          timestamp: new Date().toISOString()
-        });
-
-        // Get updated queue and broadcast refresh to staff
+        // Get updated queue for accurate counts
         const updatedQueue = await this.getQueue();
-        RealtimeService.broadcastQueueRefresh(updatedQueue);
+        
+        // Calculate service time (simplified - could be enhanced with actual tracking)
+        const serviceTime = 15; // Default service time in minutes
+        const waitTime = queuePosition.estimatedWaitMinutes || 0;
+        
+        // Broadcast patient completed event
+        realtimeService.broadcastPatientCompleted(
+          patientId,
+          'staff', // completedBy - could be enhanced to track actual staff member
+          waitTime,
+          serviceTime,
+          updatedQueue.length
+        );
 
         // Notify all remaining patients of their updated positions
         for (const position of updatedQueue) {
           if (position.status === 'waiting') {
-            RealtimeService.notifyPatientPositionChange(
+            // Calculate new position based on current queue
+            const newPosition = updatedQueue.findIndex(p => p.patient.id === position.patient.id) + 1;
+            realtimeService.broadcastQueuePositionUpdate(
               position.patient.id,
               position.position,
-              position.estimatedWaitMinutes || 0
+              newPosition,
+              position.estimatedWaitMinutes || 0,
+              updatedQueue.length,
+              'patient_completed'
             );
           }
         }
@@ -496,24 +496,33 @@ export class QueueService {
 
       // Broadcast real-time updates
       try {
-        // Broadcast queue update to all patients and staff about patient no-show
-        RealtimeService.broadcastQueueUpdate({
-          type: 'patient_completed', // Use same type as completion for queue management
-          patientId,
-          timestamp: new Date().toISOString()
-        });
-
-        // Get updated queue and broadcast refresh to staff
+        // Get updated queue for accurate counts
         const updatedQueue = await this.getQueue();
-        RealtimeService.broadcastQueueRefresh(updatedQueue);
+        
+        // Calculate wait time
+        const waitTime = queuePosition.estimatedWaitMinutes || 0;
+        
+        // Broadcast patient no-show event
+        realtimeService.broadcastPatientNoShow(
+          patientId,
+          queuePosition.patient.name,
+          'staff', // markedBy - could be enhanced to track actual staff member
+          waitTime,
+          updatedQueue.length
+        );
 
         // Notify all remaining patients of their updated positions
         for (const position of updatedQueue) {
           if (position.status === 'waiting') {
-            RealtimeService.notifyPatientPositionChange(
+            // Calculate new position based on current queue
+            const newPosition = updatedQueue.findIndex(p => p.patient.id === position.patient.id) + 1;
+            realtimeService.broadcastQueuePositionUpdate(
               position.patient.id,
               position.position,
-              position.estimatedWaitMinutes || 0
+              newPosition,
+              position.estimatedWaitMinutes || 0,
+              updatedQueue.length,
+              'patient_no_show'
             );
           }
         }
@@ -732,11 +741,15 @@ export class QueueService {
               queuePosition.patient.id
             );
             
-            // Send real-time "get ready" notification
+            // Send real-time "get ready" notification via position update
             try {
-              RealtimeService.notifyPatientGetReady(
+              realtimeService.broadcastQueuePositionUpdate(
                 queuePosition.patient.id,
-                queuePosition.estimatedWaitMinutes || 15
+                queuePosition.position,
+                queuePosition.position,
+                queuePosition.estimatedWaitMinutes || 15,
+                queuePosition.position, // totalInQueue approximation
+                'queue_reorder'
               );
               console.log(`📡 Real-time "get ready" notification sent to ${queuePosition.patient.name}`);
             } catch (realtimeError) {

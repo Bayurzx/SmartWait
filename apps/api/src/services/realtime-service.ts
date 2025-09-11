@@ -632,7 +632,9 @@ export class RealtimeService {
     // Remove oldest events if we're at capacity
     if (this.eventHistory.size >= this.MAX_HISTORY_SIZE) {
       const oldestKey = this.eventHistory.keys().next().value;
-      this.eventHistory.delete(oldestKey);
+      if (oldestKey !== undefined) {
+        this.eventHistory.delete(oldestKey);
+      }
     }
 
     this.eventHistory.set(event.eventId, event);

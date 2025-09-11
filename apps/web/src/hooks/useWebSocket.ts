@@ -27,7 +27,7 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
     error: null,
   });
 
-  const webSocketService = useRef(getWebSocketService());
+  const webSocketService = useRef(getWebSocketService(patientId));
   const hasJoinedRoom = useRef(false);
 
   const updateConnectionState = useCallback(() => {
@@ -125,16 +125,22 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
   useEffect(() => {
     const ws = webSocketService.current;
     
-    if (patientId && ws.isConnected() && !hasJoinedRoom.current) {
-      ws.joinPatientRoom(patientId);
-      hasJoinedRoom.current = true;
+    if (patientId) {
+      if (!ws.isConnected()) {
+        // Connect with patientId if not connected
+        ws.connect(patientId);
+      } else if (!hasJoinedRoom.current) {
+        // Join room if connected but not in room
+        ws.joinPatientRoom(patientId);
+        hasJoinedRoom.current = true;
+      }
     }
   }, [patientId]);
 
   const reconnect = useCallback(() => {
     setState(prev => ({ ...prev, connecting: true, error: null }));
-    webSocketService.current.connect();
-  }, []);
+    webSocketService.current.connect(patientId);
+  }, [patientId]);
 
   const disconnect = useCallback(() => {
     if (patientId && hasJoinedRoom.current) {

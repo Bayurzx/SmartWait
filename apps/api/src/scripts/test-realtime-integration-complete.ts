@@ -5,7 +5,7 @@
  * This script shows all the integration points working together
  */
 
-import RealtimeService from '../services/realtime-service';
+import { realtimeService } from '../services/realtime-service';
 
 // Mock Socket.io for demonstration
 jest.mock('../config/socket', () => ({
@@ -54,17 +54,16 @@ async function demonstrateRealTimeIntegration() {
 
   console.log(`Patient "${newPatient.name}" checking in...`);
   
-  // Staff notification for new patient
-  RealtimeService.notifyStaffNewPatient(newPatient);
-  
-  // Queue update broadcast
-  RealtimeService.broadcastQueueUpdate({
-    type: 'position_change',
-    patientId: newPatient.id,
-    newPosition: newPatient.position,
-    estimatedWait: newPatient.estimatedWait,
-    timestamp: new Date().toISOString()
-  });
+  // Patient check-in broadcast
+  realtimeService.broadcastPatientCheckedIn(
+    newPatient.id,
+    newPatient.name,
+    newPatient.position,
+    newPatient.estimatedWait,
+    1, // totalInQueue
+    newPatient.checkInTime,
+    '2:30 PM' // appointmentTime
+  );
 
   // 2. Demonstrate Call Next Patient Integration
   console.log('\n2️⃣  CALL NEXT PATIENT INTEGRATION');
@@ -78,19 +77,14 @@ async function demonstrateRealTimeIntegration() {
 
   console.log(`Calling patient "${calledPatient.name}"...`);
   
-  // Patient called notification
-  RealtimeService.notifyPatientCalled(
+  // Patient called broadcast
+  realtimeService.broadcastPatientCalled(
     calledPatient.id,
-    `${calledPatient.name}, it's your turn! Please come to the front desk now.`
+    calledPatient.name,
+    calledPatient.position,
+    'staff',
+    1 // totalInQueue
   );
-  
-  // Queue update broadcast
-  RealtimeService.broadcastQueueUpdate({
-    type: 'patient_called',
-    patientId: calledPatient.id,
-    newPosition: calledPatient.position,
-    timestamp: new Date().toISOString()
-  });
 
   // 3. Demonstrate Patient Completion Integration
   console.log('\n3️⃣  PATIENT COMPLETION INTEGRATION');
@@ -100,44 +94,29 @@ async function demonstrateRealTimeIntegration() {
   console.log(`Marking patient "${completedPatientId}" as completed...`);
   
   // Patient completion broadcast
-  RealtimeService.broadcastQueueUpdate({
-    type: 'patient_completed',
-    patientId: completedPatientId,
-    timestamp: new Date().toISOString()
-  });
-  
-  // Updated queue after completion
-  const updatedQueue = [
-    { 
-      id: '1', 
-      name: 'Patient A', 
-      position: 1, 
-      estimatedWaitMinutes: 0, 
-      status: 'waiting', 
-      patient: { id: 'patient-a' } 
-    },
-    { 
-      id: '2', 
-      name: 'Patient B', 
-      position: 2, 
-      estimatedWaitMinutes: 15, 
-      status: 'waiting', 
-      patient: { id: 'patient-b' } 
-    }
-  ];
-  
-  // Queue refresh to staff
-  RealtimeService.broadcastQueueRefresh(updatedQueue);
+  realtimeService.broadcastPatientCompleted(
+    completedPatientId,
+    'staff',
+    15, // totalWaitTime
+    10, // totalServiceTime
+    2   // totalInQueue
+  );
   
   // Position updates to remaining patients
-  updatedQueue.forEach((position: any) => {
-    if (position.status === 'waiting') {
-      RealtimeService.notifyPatientPositionChange(
-        position.patient.id,
-        position.position,
-        position.estimatedWaitMinutes
-      );
-    }
+  const remainingPatients = [
+    { id: 'patient-a', oldPosition: 2, newPosition: 1 },
+    { id: 'patient-b', oldPosition: 3, newPosition: 2 }
+  ];
+  
+  remainingPatients.forEach((patient) => {
+    realtimeService.broadcastQueuePositionUpdate(
+      patient.id,
+      patient.oldPosition,
+      patient.newPosition,
+      (patient.newPosition - 1) * 15, // estimatedWaitMinutes
+      remainingPatients.length,
+      'patient_completed'
+    );
   });
 
   // 4. Demonstrate Get Ready Notification Integration
@@ -149,7 +128,15 @@ async function demonstrateRealTimeIntegration() {
   
   console.log(`Sending "get ready" notification to patient "${readyPatientId}"...`);
   
-  RealtimeService.notifyPatientGetReady(readyPatientId, estimatedWait);
+  // Get ready notification via position update
+  realtimeService.broadcastQueuePositionUpdate(
+    readyPatientId,
+    3, // oldPosition
+    3, // newPosition (same, just updating with "get ready" context)
+    estimatedWait,
+    3, // totalInQueue
+    'queue_reorder'
+  );
 
   // 5. Demonstrate No-Show Patient Integration
   console.log('\n5️⃣  NO-SHOW PATIENT INTEGRATION');
@@ -158,50 +145,50 @@ async function demonstrateRealTimeIntegration() {
   const noShowPatientId = 'patient-005';
   console.log(`Marking patient "${noShowPatientId}" as no-show...`);
   
-  // No-show broadcast (uses completion type)
-  RealtimeService.broadcastQueueUpdate({
-    type: 'patient_completed',
-    patientId: noShowPatientId,
-    timestamp: new Date().toISOString()
-  });
+  // No-show broadcast
+  realtimeService.broadcastPatientNoShow(
+    noShowPatientId,
+    'Patient No-Show',
+    'staff',
+    30, // waitTime
+    1   // totalInQueue after no-show
+  );
   
-  // Updated queue after no-show
-  const queueAfterNoShow = [
-    { 
-      id: '1', 
-      name: 'Patient X', 
-      position: 1, 
-      estimatedWaitMinutes: 0, 
-      status: 'waiting', 
-      patient: { id: 'patient-x' } 
-    }
+  // Position updates for remaining patients
+  const remainingAfterNoShow = [
+    { id: 'patient-x', oldPosition: 2, newPosition: 1 }
   ];
   
-  // Queue refresh and position updates
-  RealtimeService.broadcastQueueRefresh(queueAfterNoShow);
-  
-  queueAfterNoShow.forEach((position: any) => {
-    if (position.status === 'waiting') {
-      RealtimeService.notifyPatientPositionChange(
-        position.patient.id,
-        position.position,
-        position.estimatedWaitMinutes
-      );
-    }
+  remainingAfterNoShow.forEach((patient) => {
+    realtimeService.broadcastQueuePositionUpdate(
+      patient.id,
+      patient.oldPosition,
+      patient.newPosition,
+      0, // estimatedWaitMinutes (now first in line)
+      1, // totalInQueue
+      'patient_no_show'
+    );
   });
 
   // 6. Demonstrate Health Check
   console.log('\n6️⃣  REAL-TIME SERVICE HEALTH CHECK');
   console.log('-'.repeat(40));
   
-  const healthStatus = RealtimeService.getHealthStatus();
+  const healthStatus = realtimeService.getHealthStatus();
   console.log('Health Status:', JSON.stringify(healthStatus, null, 2));
 
-  // 7. Demonstrate Test Message
-  console.log('\n7️⃣  TEST MESSAGE FUNCTIONALITY');
+  // 7. Demonstrate System Maintenance
+  console.log('\n7️⃣  SYSTEM MAINTENANCE NOTIFICATION');
   console.log('-'.repeat(40));
   
-  RealtimeService.sendTestMessage('test-room', 'Integration test completed successfully!');
+  realtimeService.broadcastSystemMaintenance(
+    'scheduled',
+    new Date(),
+    30, // 30 minutes
+    'System maintenance scheduled for 30 minutes',
+    false, // doesn't affect queue
+    true   // allows new check-ins
+  );
 
   // Summary
   console.log('\n' + '='.repeat(60));
