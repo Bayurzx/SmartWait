@@ -608,21 +608,21 @@ export const StaffDashboard: React.FC = () => {
 
 ### Task 9.1: End-to-End Integration and Testing
 
-**Priority:** P0 | **Estimate:** 1 day | **Status:** Not Started
+**Priority:** P0 | **Estimate:** 1 day | **Status:** Completed
 
 **Description:** Test complete system integration and fix critical bugs found during testing.
 
 **Acceptance Criteria:**
 
-- [ ] Test complete patient journey: check-in → SMS → position updates → called → completed
-- [ ] Test staff workflow: view queue → call patient → mark completed
-- [ ] Verify real-time updates work across mobile app, web portal, and staff dashboard
-- [ ] Test SMS notifications for all scenarios (check-in, get ready, call now)
-- [ ] Test error scenarios: invalid inputs, network failures, duplicate check-ins
-- [ ] Verify WebSocket reconnection after connection loss
-- [ ] Test concurrent users (multiple patients checking in simultaneously)
-- [ ] Fix any critical bugs found during testing
-- [ ] Create basic unit tests for core queue logic
+- [x] Test complete patient journey: check-in → SMS → position updates → called → completed
+- [x] Test staff workflow: view queue → call patient → mark completed
+- [x] Verify real-time updates work across mobile app, web portal, and staff dashboard
+- [x] Test SMS notifications for all scenarios (check-in, get ready, call now)
+- [x] Test error scenarios: invalid inputs, network failures, duplicate check-ins
+- [x] Verify WebSocket reconnection after connection loss
+- [x] Test concurrent users (multiple patients checking in simultaneously)
+- [x] Fix any critical bugs found during testing
+- [x] Create basic unit tests for core queue logic
 
 **Testing Scenarios:**
 
@@ -666,22 +666,22 @@ describe('Complete Patient Journey', () => {
 
 ### Task 10.1: Production Deployment and Documentation
 
-**Priority:** P0 | **Estimate:** 1 day | **Status:** Not Started
+**Priority:** P0 | **Estimate:** 1 day | **Status:** Completed
 
 **Description:** Deploy MVP to production environment and create essential documentation.
 
 **Acceptance Criteria:**
 
-- [ ] Set up production server with Docker Compose
-- [ ] Configure production environment variables and secrets
-- [ ] Deploy all services (API, web portal, staff dashboard) to production
-- [ ] Set up production database with proper backups
-- [ ] Configure Twilio SMS service for production
-- [ ] Test production deployment with real SMS and queue operations
-- [ ] Create deployment documentation and runbook
-- [ ] Create user guides for patients and staff
-- [ ] Set up basic monitoring and health checks
-- [ ] Create troubleshooting guide for common issues
+- [x] Set up production server with Docker Compose
+- [x] Configure production environment variables and secrets
+- [x] Deploy all services (API, web portal, staff dashboard) to production
+- [x] Set up production database with proper backups
+- [x] Configure Twilio SMS service for production
+- [x] Test production deployment with real SMS and queue operations
+- [x] Create deployment documentation and runbook
+- [x] Create user guides for patients and staff
+- [x] Set up basic monitoring and health checks
+- [x] Create troubleshooting guide for common issues
 
 **Production Deployment:**
 
