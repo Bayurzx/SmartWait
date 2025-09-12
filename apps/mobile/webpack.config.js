@@ -14,7 +14,12 @@ module.exports = async function (env, argv) {
   config.resolve.alias = {
     ...config.resolve.alias,
     'react-native': 'react-native-web',
-    'react-native-vector-icons': 'react-native-vector-icons/dist',
+    // Add these new aliases to fix the errors
+    'react-native-vector-icons': '@expo/vector-icons',
+    '@react-native-vector-icons/get-image': '@expo/vector-icons',
+    '@react-native-vector-icons/material-design-icons': '@expo/vector-icons/MaterialIcons',
+    '@react-native-vector-icons/common': '@expo/vector-icons',
+    'react-native/Libraries/Image/AssetRegistry': '@react-native/assets-registry/registry',
   };
 
   // Add babel loader configuration

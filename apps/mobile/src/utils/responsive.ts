@@ -1,5 +1,5 @@
 // apps\mobile\src\utils\responsive.ts 
-import { Dimensions, Platform } from 'react-native';
+import { Dimensions, Platform, ViewStyle, TextStyle } from 'react-native';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -38,13 +38,13 @@ export const responsive = <T>(values: {
   xl?: T;
 }): T | undefined => {
   const currentSize = getScreenSize();
-  
+
   // Return the value for current size or fall back to smaller sizes
-  return values[currentSize] || 
-         values.lg || 
-         values.md || 
-         values.sm || 
-         values.xs;
+  return values[currentSize] ||
+    values.lg ||
+    values.md ||
+    values.sm ||
+    values.xs;
 };
 
 // Responsive padding/margin helper
@@ -59,13 +59,13 @@ export const spacing = {
 // Get responsive spacing
 export const getSpacing = (size: keyof typeof spacing): number => {
   const screenSize = getScreenSize();
-  
+
   // Adjust spacing based on screen size
-  const multiplier = screenSize === 'xs' ? 0.8 : 
-                    screenSize === 'sm' ? 0.9 : 
-                    screenSize === 'md' ? 1 : 
-                    screenSize === 'lg' ? 1.1 : 1.2;
-  
+  const multiplier = screenSize === 'xs' ? 0.8 :
+    screenSize === 'sm' ? 0.9 :
+      screenSize === 'md' ? 1 :
+        screenSize === 'lg' ? 1.1 : 1.2;
+
   return spacing[size] * multiplier;
 };
 
@@ -83,22 +83,22 @@ export const fontSize = {
 // Get responsive font size
 export const getFontSize = (size: keyof typeof fontSize): number => {
   const screenSize = getScreenSize();
-  
+
   // Adjust font size based on screen size
-  const multiplier = screenSize === 'xs' ? 0.9 : 
-                    screenSize === 'sm' ? 0.95 : 
-                    screenSize === 'md' ? 1 : 
-                    screenSize === 'lg' ? 1.05 : 1.1;
-  
+  const multiplier = screenSize === 'xs' ? 0.9 :
+    screenSize === 'sm' ? 0.95 :
+      screenSize === 'md' ? 1 :
+        screenSize === 'lg' ? 1.05 : 1.1;
+
   return fontSize[size] * multiplier;
 };
 
 // Container max width for web
-export const getContainerMaxWidth = (): number | string => {
-  if (!isWeb) return '100%';
-  
+export const getContainerMaxWidth = (): number => {
+  if (!isWeb) return screenWidth;
+
   const screenSize = getScreenSize();
-  
+
   switch (screenSize) {
     case 'xl':
       return 600;
@@ -107,27 +107,25 @@ export const getContainerMaxWidth = (): number | string => {
     case 'md':
       return 400;
     default:
-      return '100%';
+      return screenWidth;
   }
 };
 
-// Web-specific styles
-export const webStyles = {
-  container: {
+// Web-specific styles - properly typed for React Native
+export const webStyles: ViewStyle = {
+  ...(isWeb && {
     maxWidth: getContainerMaxWidth(),
-    alignSelf: 'center' as const,
+    alignSelf: 'center',
     width: '100%',
-  },
-  
-  // Ensure minimum height for web
-  minHeight: isWeb ? '100vh' : undefined,
-  
-  // Better scrolling on web
-  scrollBehavior: isWeb ? 'smooth' as const : undefined,
-  
-  // Web-specific shadows
-  boxShadow: isWeb ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : undefined,
+  }),
 };
+
+// Container styles that work across platforms
+export const getWebContainerStyle = (): ViewStyle => ({
+  maxWidth: getContainerMaxWidth(),
+  alignSelf: 'center',
+  width: '100%',
+});
 
 // Platform-specific adjustments
 export const platformStyles = {
@@ -135,28 +133,58 @@ export const platformStyles = {
   input: {
     minHeight: 50,
     textAlignVertical: 'center' as const,
-    ...(isWeb && {
-      outlineStyle: 'none' as const,
-      cursor: 'text' as const,
-    }),
+  } as ViewStyle & {
+    // Web-specific properties that TypeScript should ignore
+    outlineStyle?: string;
+    cursor?: string;
   },
-  
+
   // Button styles
   button: {
     minHeight: 48,
-    ...(isWeb && {
-      cursor: 'pointer' as const,
-      userSelect: 'none' as const,
-    }),
+  } as ViewStyle & {
+    // Web-specific properties
+    cursor?: string;
+    userSelect?: string;
   },
-  
+
   // Text selection
-  text: {
-    ...(isWeb && {
-      userSelect: 'text' as const,
-    }),
+  text: {} as TextStyle & {
+    // Web-specific properties
+    userSelect?: string;
   },
 };
+
+// Web-specific style additions (to be applied conditionally)
+export const getWebSpecificStyles = () => ({
+  input: isWeb ? {
+    outlineStyle: 'none',
+    cursor: 'text',
+  } : {},
+
+  button: isWeb ? {
+    cursor: 'pointer',
+    userSelect: 'none',
+  } : {},
+
+  text: isWeb ? {
+    userSelect: 'text',
+  } : {},
+
+  container: isWeb ? {
+    minHeight: '100vh',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+  } : {},
+
+  submitButton: isWeb ? {
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+    transition: 'all 0.2s ease-in-out',
+  } : {},
+
+  inputBox: isWeb ? {
+    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+  } : {},
+});
 
 export default {
   isWeb,
@@ -171,5 +199,7 @@ export default {
   getFontSize,
   getContainerMaxWidth,
   webStyles,
+  getWebContainerStyle,
   platformStyles,
+  getWebSpecificStyles,
 };
