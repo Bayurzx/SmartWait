@@ -1,3 +1,4 @@
+// apps\web\src\app\status\[id]\page.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';

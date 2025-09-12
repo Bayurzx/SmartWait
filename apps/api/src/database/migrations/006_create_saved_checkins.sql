@@ -1,3 +1,4 @@
+-- apps\api\src\database\migrations\006_create_saved_checkins.sql
 -- Create saved_checkins table for storing user's previous check-ins
 CREATE TABLE IF NOT EXISTS saved_checkins (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

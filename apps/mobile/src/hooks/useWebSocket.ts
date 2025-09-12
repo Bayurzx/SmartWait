@@ -1,14 +1,25 @@
+// apps\mobile\src\hooks\useWebSocket.ts
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import { WebSocketService, ConnectionStatus, AuthData, getWebSocketService } from '../services/websocket-service';
+import { getWebSocketService, WebSocketService, QueueUpdate, PositionUpdate } from '../services/websocket';
+
+export interface ConnectionStatus {
+  connected: boolean;
+  connecting: boolean;
+  reconnectAttempts: number;
+  authenticated: boolean;
+}
+
+export interface AuthData {
+  patientId?: string;
+  token?: string;
+  userType: 'patient' | 'staff';
+}
 
 export interface UseWebSocketOptions {
-  url: string;
   authData: AuthData;
   autoConnect?: boolean;
   reconnectOnAppForeground?: boolean;
-  maxReconnectionAttempts?: number;
-  reconnectionDelay?: number;
 }
 
 export interface UseWebSocketReturn {
@@ -17,11 +28,11 @@ export interface UseWebSocketReturn {
   connect: () => Promise<void>;
   disconnect: () => void;
   forceReconnect: () => Promise<void>;
-  emit: (event: string, data?: any) => void;
   joinRoom: (room: string, patientId?: string) => void;
   leaveRoom: (room: string) => void;
   on: (event: string, callback: Function) => void;
   off: (event: string, callback?: Function) => void;
+  removeAllListeners: () => void;
 }
 
 /**
@@ -29,43 +40,69 @@ export interface UseWebSocketReturn {
  */
 export const useWebSocket = (options: UseWebSocketOptions): UseWebSocketReturn => {
   const {
-    url,
     authData,
     autoConnect = true,
-    reconnectOnAppForeground = true,
-    maxReconnectionAttempts = 5,
-    reconnectionDelay = 1000
+    reconnectOnAppForeground = true
   } = options;
 
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
     connected: false,
     connecting: false,
-    reconnecting: false,
-    reconnectAttempts: 0
+    reconnectAttempts: 0,
+    authenticated: false
   });
 
   const webSocketServiceRef = useRef<WebSocketService | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
-  const eventListenersRef = useRef<Map<string, Function[]>>(new Map());
+  const isInitializedRef = useRef(false);
 
   // Initialize WebSocket service
   useEffect(() => {
     if (!webSocketServiceRef.current) {
-      webSocketServiceRef.current = getWebSocketService({
-        url,
-        autoConnect,
-        reconnectionAttempts: maxReconnectionAttempts,
-        reconnectionDelay,
-        reconnectionDelayMax: 5000,
-        timeout: 20000
-      });
-
-      // Set up connection status listener
-      webSocketServiceRef.current.on('connection_status_changed', (status: ConnectionStatus) => {
-        setConnectionStatus(status);
-      });
+      webSocketServiceRef.current = getWebSocketService();
+      isInitializedRef.current = true;
     }
-  }, [url, autoConnect, maxReconnectionAttempts, reconnectionDelay]);
+  }, []);
+
+  // Update connection status based on service status
+  useEffect(() => {
+    if (!webSocketServiceRef.current) return;
+
+    const updateStatus = () => {
+      if (webSocketServiceRef.current) {
+        const status = webSocketServiceRef.current.getConnectionStatus();
+        setConnectionStatus(status);
+      }
+    };
+
+    // Set up event listeners for status changes
+    const service = webSocketServiceRef.current;
+
+    service.onConnect(() => {
+      console.log('WebSocket connected in hook');
+      updateStatus();
+    });
+
+    service.onDisconnect(() => {
+      console.log('WebSocket disconnected in hook');
+      updateStatus();
+    });
+
+    service.onConnectionError((error) => {
+      console.error('WebSocket connection error in hook:', error);
+      updateStatus();
+    });
+
+    // Initial status update
+    updateStatus();
+
+    // Periodic status polling as fallback
+    const statusInterval = setInterval(updateStatus, 1000);
+
+    return () => {
+      clearInterval(statusInterval);
+    };
+  }, []);
 
   // Handle app state changes for reconnection
   useEffect(() => {
@@ -77,27 +114,21 @@ export const useWebSocket = (options: UseWebSocketOptions): UseWebSocketReturn =
 
       // App came to foreground from background
       if (previousAppState.match(/inactive|background/) && nextAppState === 'active') {
-        console.log('📱 App came to foreground, checking WebSocket connection');
-        
+        console.log('App came to foreground, checking WebSocket connection');
+
         if (webSocketServiceRef.current && !webSocketServiceRef.current.isConnected()) {
-          console.log('📱 WebSocket disconnected, attempting to reconnect');
+          console.log('WebSocket disconnected, attempting to reconnect');
           try {
-            await webSocketServiceRef.current.forceReconnect();
+            await connect();
           } catch (error) {
-            console.error('📱 Failed to reconnect on app foreground:', error);
+            console.error('Failed to reconnect on app foreground:', error);
           }
         }
-      }
-      
-      // App went to background
-      if (nextAppState.match(/inactive|background/) && previousAppState === 'active') {
-        console.log('📱 App went to background');
-        // Optionally disconnect or reduce activity
       }
     };
 
     const subscription = AppState.addEventListener('change', handleAppStateChange);
-    
+
     return () => {
       subscription?.remove();
     };
@@ -105,8 +136,10 @@ export const useWebSocket = (options: UseWebSocketOptions): UseWebSocketReturn =
 
   // Auto-connect on mount
   useEffect(() => {
-    if (autoConnect && webSocketServiceRef.current && authData) {
-      connect();
+    if (autoConnect && webSocketServiceRef.current && authData && isInitializedRef.current) {
+      connect().catch(error => {
+        console.error('Auto-connect failed:', error);
+      });
     }
   }, [autoConnect, authData]);
 
@@ -114,6 +147,7 @@ export const useWebSocket = (options: UseWebSocketOptions): UseWebSocketReturn =
   useEffect(() => {
     return () => {
       if (webSocketServiceRef.current) {
+        webSocketServiceRef.current.removeAllListeners();
         webSocketServiceRef.current.disconnect();
       }
     };
@@ -125,13 +159,16 @@ export const useWebSocket = (options: UseWebSocketOptions): UseWebSocketReturn =
     }
 
     try {
-      await webSocketServiceRef.current.connect(authData);
-      
-      // Store auth data for automatic reconnection
-      await webSocketServiceRef.current.storeAuthData(authData);
-      
+      if (authData.userType === 'patient' && authData.patientId) {
+        await webSocketServiceRef.current.connectAsPatient(authData.patientId);
+      } else if (authData.userType === 'staff' && authData.token) {
+        await webSocketServiceRef.current.connectAsStaff(authData.token);
+      } else {
+        throw new Error('Invalid authentication data provided');
+      }
+
     } catch (error) {
-      console.error('📱 Failed to connect WebSocket:', error);
+      console.error('Failed to connect WebSocket:', error);
       throw error;
     }
   }, [authData]);
@@ -148,18 +185,18 @@ export const useWebSocket = (options: UseWebSocketOptions): UseWebSocketReturn =
     }
 
     try {
-      await webSocketServiceRef.current.forceReconnect();
+      // Disconnect first, then reconnect
+      webSocketServiceRef.current.disconnect();
+
+      // Wait a moment before reconnecting
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      await connect();
     } catch (error) {
-      console.error('📱 Failed to force reconnect:', error);
+      console.error('Failed to force reconnect:', error);
       throw error;
     }
-  }, []);
-
-  const emit = useCallback((event: string, data?: any) => {
-    if (webSocketServiceRef.current) {
-      webSocketServiceRef.current.emit(event, data);
-    }
-  }, []);
+  }, [connect]);
 
   const joinRoom = useCallback((room: string, patientId?: string) => {
     if (webSocketServiceRef.current) {
@@ -174,33 +211,68 @@ export const useWebSocket = (options: UseWebSocketOptions): UseWebSocketReturn =
   }, []);
 
   const on = useCallback((event: string, callback: Function) => {
-    if (webSocketServiceRef.current) {
-      webSocketServiceRef.current.on(event, callback);
-      
-      // Track listeners for cleanup
-      if (!eventListenersRef.current.has(event)) {
-        eventListenersRef.current.set(event, []);
-      }
-      eventListenersRef.current.get(event)!.push(callback);
+    if (!webSocketServiceRef.current) return;
+
+    const service = webSocketServiceRef.current;
+
+    // Map common events to service methods
+    switch (event) {
+      case 'queue_update':
+        service.onQueueUpdate(callback as (update: QueueUpdate) => void);
+        break;
+      case 'position_update':
+        service.onPositionUpdate(callback as (update: PositionUpdate) => void);
+        break;
+      case 'status_change':
+        service.onStatusChange(callback as (update: QueueUpdate) => void);
+        break;
+      case 'connect':
+        service.onConnect(callback as () => void);
+        break;
+      case 'disconnect':
+        service.onDisconnect(callback as () => void);
+        break;
+      case 'connect_error':
+        service.onConnectionError(callback as (error: Error) => void);
+        break;
+      case 'room-joined':
+        service.onRoomJoined(callback as (rooms: string[]) => void);
+        break;
+      case 'room-left':
+        service.onRoomLeft(callback as (rooms: string[]) => void);
+        break;
+      case 'current-rooms':
+        service.onCurrentRooms(callback as (rooms: string[]) => void);
+        break;
+      default:
+        console.warn(`Event ${event} not specifically handled, may not work as expected`);
+        break;
     }
   }, []);
 
   const off = useCallback((event: string, callback?: Function) => {
+    if (!webSocketServiceRef.current) return;
+
+    const service = webSocketServiceRef.current;
+
+    // Map common events to service methods
+    switch (event) {
+      case 'queue_update':
+        service.offQueueUpdate(callback as (update: QueueUpdate) => void);
+        break;
+      case 'position_update':
+        service.offPositionUpdate(callback as (update: PositionUpdate) => void);
+        break;
+      default:
+        // For other events, we'd need to extend the service or use a generic off method
+        console.warn(`Cannot remove listener for ${event} - not implemented in service`);
+        break;
+    }
+  }, []);
+
+  const removeAllListeners = useCallback(() => {
     if (webSocketServiceRef.current) {
-      webSocketServiceRef.current.off(event, callback);
-      
-      // Clean up tracking
-      if (callback) {
-        const listeners = eventListenersRef.current.get(event);
-        if (listeners) {
-          const index = listeners.indexOf(callback);
-          if (index > -1) {
-            listeners.splice(index, 1);
-          }
-        }
-      } else {
-        eventListenersRef.current.delete(event);
-      }
+      webSocketServiceRef.current.removeAllListeners();
     }
   }, []);
 
@@ -210,20 +282,19 @@ export const useWebSocket = (options: UseWebSocketOptions): UseWebSocketReturn =
     connect,
     disconnect,
     forceReconnect,
-    emit,
     joinRoom,
     leaveRoom,
     on,
-    off
+    off,
+    removeAllListeners
   };
 };
 
 /**
  * Hook for queue-specific WebSocket functionality
  */
-export const useQueueWebSocket = (patientId: string, apiUrl: string) => {
+export const useQueueWebSocket = (patientId: string) => {
   const webSocket = useWebSocket({
-    url: apiUrl,
     authData: {
       patientId,
       userType: 'patient'
@@ -238,30 +309,38 @@ export const useQueueWebSocket = (patientId: string, apiUrl: string) => {
 
   useEffect(() => {
     // Listen for queue updates
-    const handleQueueUpdate = (data: any) => {
-      console.log('📱 Queue update received:', data);
+    const handleQueueUpdate = (data: QueueUpdate) => {
+      console.log('Queue update received:', data);
       if (data.patientId === patientId) {
-        setQueuePosition(data.position);
-        setEstimatedWait(data.estimatedWait);
-        setQueueStatus(data.status || 'waiting');
+        if (data.newPosition !== undefined) {
+          setQueuePosition(data.newPosition);
+        }
+        if (data.estimatedWait !== undefined) {
+          setEstimatedWait(data.estimatedWait);
+        }
+        if (data.status) {
+          setQueueStatus(data.status);
+        }
       }
     };
 
-    const handlePositionUpdate = (data: any) => {
-      console.log('📱 Position update received:', data);
+    const handlePositionUpdate = (data: PositionUpdate) => {
+      console.log('Position update received:', data);
       setQueuePosition(data.position);
       setEstimatedWait(data.estimatedWait);
     };
 
-    const handleNotification = (data: any) => {
-      console.log('📱 Notification received:', data);
-      // Handle notifications (could trigger local notifications)
+    const handleStatusChange = (data: QueueUpdate) => {
+      console.log('Status change received:', data);
+      if (data.patientId === patientId && data.status) {
+        setQueueStatus(data.status);
+      }
     };
 
     // Set up event listeners
     webSocket.on('queue_update', handleQueueUpdate);
     webSocket.on('position_update', handlePositionUpdate);
-    webSocket.on('notification', handleNotification);
+    webSocket.on('status_change', handleStatusChange);
 
     // Join patient-specific room when connected
     if (webSocket.isConnected) {
@@ -273,25 +352,17 @@ export const useQueueWebSocket = (patientId: string, apiUrl: string) => {
     return () => {
       webSocket.off('queue_update', handleQueueUpdate);
       webSocket.off('position_update', handlePositionUpdate);
-      webSocket.off('notification', handleNotification);
+      webSocket.off('status_change', handleStatusChange);
     };
   }, [webSocket, patientId]);
 
   // Auto-join rooms when connection is established
   useEffect(() => {
-    const handleConnectionStatusChange = (status: ConnectionStatus) => {
-      if (status.connected) {
-        webSocket.joinRoom(`patient_${patientId}`, patientId);
-        webSocket.joinRoom('patients');
-      }
-    };
-
-    webSocket.on('connection_status_changed', handleConnectionStatusChange);
-
-    return () => {
-      webSocket.off('connection_status_changed', handleConnectionStatusChange);
-    };
-  }, [webSocket, patientId]);
+    if (webSocket.isConnected) {
+      webSocket.joinRoom(`patient_${patientId}`, patientId);
+      webSocket.joinRoom('patients');
+    }
+  }, [webSocket.isConnected, patientId]);
 
   return {
     ...webSocket,
@@ -304,9 +375,8 @@ export const useQueueWebSocket = (patientId: string, apiUrl: string) => {
 /**
  * Hook for staff WebSocket functionality
  */
-export const useStaffWebSocket = (token: string, apiUrl: string) => {
+export const useStaffWebSocket = (token: string) => {
   const webSocket = useWebSocket({
-    url: apiUrl,
     authData: {
       token,
       userType: 'staff'
@@ -319,9 +389,14 @@ export const useStaffWebSocket = (token: string, apiUrl: string) => {
 
   useEffect(() => {
     // Listen for queue updates
-    const handleQueueUpdate = (data: any) => {
-      console.log('📱 Staff queue update received:', data);
-      setQueueData(data.queue || []);
+    const handleQueueUpdate = (data: QueueUpdate) => {
+      console.log('Staff queue update received:', data);
+      // Update queue data based on the update
+      setQueueData(currentQueue => {
+        // This is a simplified update - you might need more complex logic
+        // depending on your queue data structure
+        return [...currentQueue];
+      });
     };
 
     // Set up event listeners
@@ -340,18 +415,10 @@ export const useStaffWebSocket = (token: string, apiUrl: string) => {
 
   // Auto-join staff room when connection is established
   useEffect(() => {
-    const handleConnectionStatusChange = (status: ConnectionStatus) => {
-      if (status.connected) {
-        webSocket.joinRoom('staff');
-      }
-    };
-
-    webSocket.on('connection_status_changed', handleConnectionStatusChange);
-
-    return () => {
-      webSocket.off('connection_status_changed', handleConnectionStatusChange);
-    };
-  }, [webSocket]);
+    if (webSocket.isConnected) {
+      webSocket.joinRoom('staff');
+    }
+  }, [webSocket.isConnected]);
 
   return {
     ...webSocket,

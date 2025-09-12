@@ -15,7 +15,7 @@ export interface WebSocketConfig {
 export interface ConnectionStatus {
   connected: boolean;
   connecting: boolean;
-  reconnecting: boolean;
+  reconnecting?: boolean;
   error?: string;
   reconnectAttempts: number;
   lastConnected?: Date;

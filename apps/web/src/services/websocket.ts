@@ -1,3 +1,4 @@
+// apps\web\src\services\websocket.ts
 'use client';
 
 import { io, Socket } from 'socket.io-client';

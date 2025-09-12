@@ -1,3 +1,4 @@
+// apps\web\src\app\checkin\page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';

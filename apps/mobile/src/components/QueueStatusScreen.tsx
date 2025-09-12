@@ -1,3 +1,4 @@
+// apps\mobile\src\components\QueueStatusScreen.tsx
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Alert } from 'react-native';
 import { useQueueWebSocket } from '../hooks/useWebSocket';
@@ -23,7 +24,7 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
     forceReconnect,
     on,
     off
-  } = useQueueWebSocket(patientId, apiUrl);
+  } = useQueueWebSocket(patientId);
 
   useEffect(() => {
     // Listen for connection events

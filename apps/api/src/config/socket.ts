@@ -1,3 +1,4 @@
+// apps\api\src\config\socket.ts
 import { Server as SocketIOServer } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { createClient } from 'redis';
