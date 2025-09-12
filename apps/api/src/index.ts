@@ -21,6 +21,8 @@ const httpServer = createServer(app);
 const PORT = process.env.PORT || 3001;
 
 // Security middleware
+console.log("ALLOWED_ORIGINS", process.env.ALLOWED_ORIGINS);
+
 app.use(helmet());
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],

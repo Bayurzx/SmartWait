@@ -1,6 +1,7 @@
 # mine
 *_x.*
 package-lock.json
+.env.test
 
 # Dependencies
 node_modules/
