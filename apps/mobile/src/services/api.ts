@@ -1,3 +1,4 @@
+// apps\mobile\src\services\api.ts
 import { CheckInData, CheckInResponse, QueueStatus, ApiError } from '../types';
 import { configService } from './config';
 
@@ -8,7 +9,15 @@ export class ApiService {
     this.baseUrl = baseUrl || configService.getApiUrl();
   }
 
-  private async makeRequest<T>(
+  // Public method for external use
+  async makeRequest<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    return this.makeRequestInternal<T>(endpoint, options);
+  }
+
+  private async makeRequestInternal<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
@@ -41,18 +50,18 @@ export class ApiService {
   }
 
   async checkIn(data: CheckInData): Promise<CheckInResponse> {
-    return this.makeRequest<CheckInResponse>('/api/checkin', {
+    return this.makeRequestInternal<CheckInResponse>('/api/checkin', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async getQueueStatus(patientId: string): Promise<{ success: boolean; data: QueueStatus }> {
-    return this.makeRequest<{ success: boolean; data: QueueStatus }>(`/api/position/${patientId}`);
+  async getQueueStatus(patientId: string): Promise<QueueStatus> {
+    return this.makeRequestInternal<QueueStatus>(`/api/position/${patientId}`);
   }
 
   async healthCheck(): Promise<{ status: string; timestamp: string }> {
-    return this.makeRequest<{ status: string; timestamp: string }>('/api/health');
+    return this.makeRequestInternal<{ status: string; timestamp: string }>('/api/health');
   }
 }
 

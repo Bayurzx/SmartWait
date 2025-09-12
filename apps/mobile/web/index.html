@@ -1,0 +1,168 @@
+<!-- apps\mobile\web\index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <meta name="theme-color" content="#2563EB" />
+  <meta name="description" content="SmartWait - Healthcare Queue Management System" />
+  
+  <title>SmartWait - Check In</title>
+  
+  <!-- Responsive design meta tags -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  
+  <!-- PWA meta tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="SmartWait" />
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  
+  <!-- Preload critical resources -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  
+  <!-- Base styles for responsive design -->
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #F9FAFB;
+      overflow-x: hidden;
+    }
+    
+    #root {
+      height: 100%;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Responsive container */
+    .container {
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+    
+    /* Mobile-first responsive breakpoints */
+    @media (max-width: 576px) {
+      .container {
+        padding: 0 12px;
+      }
+    }
+    
+    @media (min-width: 768px) {
+      .container {
+        max-width: 600px;
+        padding: 0 24px;
+      }
+    }
+    
+    @media (min-width: 992px) {
+      .container {
+        max-width: 700px;
+      }
+    }
+    
+    /* Loading spinner */
+    .loading-spinner {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #2563EB;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Smooth scrolling */
+    html {
+      scroll-behavior: smooth;
+    }
+    
+    /* Focus styles for accessibility */
+    *:focus {
+      outline: 2px solid #2563EB;
+      outline-offset: 2px;
+    }
+    
+    /* Button hover effects for web */
+    @media (hover: hover) {
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      }
+    }
+    
+    /* Input focus styles */
+    input:focus {
+      border-color: #2563EB;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    /* Prevent zoom on iOS */
+    input[type="text"],
+    input[type="tel"],
+    input[type="email"],
+    textarea {
+      font-size: 16px;
+    }
+    
+    /* Custom scrollbar for webkit browsers */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
+  </style>
+</head>
+<body>
+  <noscript>
+    <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+      <h2>JavaScript Required</h2>
+      <p>SmartWait requires JavaScript to function properly. Please enable JavaScript in your browser and refresh the page.</p>
+    </div>
+  </noscript>
+  
+  <div id="root">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p style="margin-top: 16px; color: #6B7280;">Loading SmartWait...</p>
+    </div>
+  </div>
+</body>
+</html>

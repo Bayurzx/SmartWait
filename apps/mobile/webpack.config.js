@@ -1,3 +1,4 @@
+// apps\mobile\webpack.config.js
 const createExpoWebpackConfigAsync = require('@expo/webpack-config');
 const path = require('path');
 
@@ -12,7 +13,7 @@ module.exports = async function (env, argv) {
   // Add module resolution for React Native Web
   config.resolve.alias = {
     ...config.resolve.alias,
-    'react-native$': 'react-native-web',
+    'react-native': 'react-native-web',
     'react-native-vector-icons': 'react-native-vector-icons/dist',
   };
 
@@ -30,6 +31,29 @@ module.exports = async function (env, argv) {
       },
     },
   });
+
+  // Add CSS support for better web styling
+  config.module.rules.push({
+    test: /\.css$/,
+    use: ['style-loader', 'css-loader'],
+  });
+
+  // Optimize for web performance
+  if (env.mode === 'production') {
+    config.optimization = {
+      ...config.optimization,
+      splitChunks: {
+        chunks: 'all',
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+          },
+        },
+      },
+    };
+  }
 
   return config;
 };

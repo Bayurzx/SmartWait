@@ -1,3 +1,4 @@
+// apps\mobile\src\components\CheckInForm.tsx 
 import React, { useState } from 'react';
 import {
   View,
@@ -12,6 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { CheckInData, ValidationError } from '../types';
+import { webStyles, platformStyles, getSpacing, getFontSize, isWeb } from '../utils/responsive';
 
 interface CheckInFormProps {
   onSubmit: (data: CheckInData) => Promise<void>;
@@ -268,44 +270,53 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+    ...webStyles,
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: getSpacing('lg'),
+    paddingBottom: getSpacing('xl'),
+    ...webStyles.container,
   },
   title: {
-    fontSize: 28,
+    fontSize: getFontSize('xxxl'),
     fontWeight: 'bold',
     color: '#1F2937',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: getSpacing('sm'),
+    ...platformStyles.text,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: getFontSize('md'),
     color: '#6B7280',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: getSpacing('xl'),
+    ...platformStyles.text,
   },
   fieldContainer: {
-    marginBottom: 20,
+    marginBottom: getSpacing('lg'),
   },
   label: {
-    fontSize: 16,
+    fontSize: getFontSize('md'),
     fontWeight: '600',
     color: '#374151',
-    marginBottom: 8,
+    marginBottom: getSpacing('sm'),
+    ...platformStyles.text,
   },
   input: {
     backgroundColor: 'white',
     borderWidth: 1,
     borderColor: '#D1D5DB',
     borderRadius: 8,
-    padding: 16,
-    fontSize: 16,
+    padding: getSpacing('md'),
+    fontSize: getFontSize('md'),
     color: '#1F2937',
+    ...platformStyles.input,
+    ...(isWeb && {
+      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+    }),
   },
   inputError: {
     borderColor: '#EF4444',
@@ -324,21 +335,29 @@ const styles = StyleSheet.create({
   submitButton: {
     backgroundColor: '#2563EB',
     borderRadius: 8,
-    padding: 16,
+    padding: getSpacing('md'),
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: getSpacing('md'),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    ...platformStyles.button,
+    ...(isWeb && {
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+      transition: 'all 0.2s ease-in-out',
+    }),
   },
   submitButtonDisabled: {
     backgroundColor: '#9CA3AF',
+    ...(isWeb && {
+      cursor: 'not-allowed',
+    }),
   },
   submitButtonText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: getFontSize('lg'),
     fontWeight: '600',
   },
   loadingContainer: {

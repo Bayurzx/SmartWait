@@ -1,3 +1,4 @@
+// apps\mobile\src\types\index.ts
 // Core data types for the mobile app
 
 export interface CheckInData {
@@ -26,17 +27,16 @@ export interface Patient {
 
 export interface CheckInResponse {
   success: boolean;
-  data: {
-    patientId: string;
-    position: number;
-    estimatedWait: number;
-  };
+  patientId: string;
+  position: number;
+  estimatedWait: number;
 }
 
 export interface QueueStatus {
   patientId: string;
   position: number;
   estimatedWait: number;
+  estimatedWaitMinutes?: number;
   status: 'waiting' | 'called' | 'completed';
 }
 

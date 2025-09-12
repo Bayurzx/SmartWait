@@ -1,3 +1,4 @@
+// apps\mobile\src\screens\QueueStatusScreen.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -161,13 +162,9 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
       if (showLoading) setLoading(true);
       
       const response = await apiService.getQueueStatus(patientId);
-
-      if (response.success) {
-        setQueueStatus(response.data);
-        setLastUpdate(new Date());
-      } else {
-        throw new Error('Failed to get queue status');
-      }
+      
+      setQueueStatus(response);
+      setLastUpdate(new Date());
     } catch (error) {
       console.error('Queue status error:', error);
       

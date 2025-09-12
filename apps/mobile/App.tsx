@@ -1,3 +1,4 @@
+// apps\mobile\App.tsx
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
