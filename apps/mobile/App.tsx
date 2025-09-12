@@ -4,8 +4,8 @@ import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { PaperProvider } from 'react-native-paper';
 
-import CheckInScreen from './src/screens/CheckInScreen';
-import QueueStatusScreen from './src/screens/QueueStatusScreen';
+import { CheckInScreen } from './src/screens/CheckInScreen';
+import { QueueStatusScreen } from './src/screens/QueueStatusScreen';
 import { navigationService, NavigationState } from './src/services/navigation';
 import { configService } from './src/services/config';
 

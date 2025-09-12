@@ -26,15 +26,13 @@
       "package": "com.smartwait.mobile"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/icon.png"
     },
     "extra": {
       "apiUrl": "http://localhost:3001",
       "wsUrl": "ws://localhost:3001"
     },
-    "plugins": [
-      "expo-router"
-    ],
+
     "scheme": "smartwait"
   }
 }
