@@ -6,14 +6,14 @@ export interface QueueUpdate {
   type: 'position_change' | 'patient_called' | 'patient_completed';
   patientId: string;
   newPosition?: number;
-  estimatedWait?: number;
+  estimatedWaitMinutes?: number;
   status?: 'waiting' | 'called' | 'completed';
   timestamp: string;
 }
 
 export interface PositionUpdate {
   position: number;
-  estimatedWait: number;
+  estimatedWaitMinutes: number;
   timestamp: string;
 }
 

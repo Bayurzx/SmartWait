@@ -156,7 +156,7 @@ class CheckinHistoryService {
         isValid: true,
         status: queueStatus.status,
         position: queueStatus.position,
-        estimatedWait: queueStatus.estimatedWaitMinutes || queueStatus.estimatedWait,
+        estimatedWait: queueStatus.estimatedWaitMinutes,
       };
     } catch (error) {
       console.error('Error validating saved check-in:', error);

@@ -35,8 +35,8 @@ export interface CheckInResponse {
 export interface QueueStatus {
   patientId: string;
   position: number;
-  estimatedWait: number;
-  estimatedWaitMinutes?: number;
+  // estimatedWait: number;
+  estimatedWaitMinutes: number;
   status: 'waiting' | 'called' | 'completed';
 }
 
@@ -52,4 +52,11 @@ export interface ApiError {
     message: string;
     details?: any;
   };
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
 }

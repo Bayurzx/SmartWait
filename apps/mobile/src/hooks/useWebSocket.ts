@@ -315,8 +315,8 @@ export const useQueueWebSocket = (patientId: string) => {
         if (data.newPosition !== undefined) {
           setQueuePosition(data.newPosition);
         }
-        if (data.estimatedWait !== undefined) {
-          setEstimatedWait(data.estimatedWait);
+        if (data.estimatedWaitMinutes !== undefined) {
+          setEstimatedWait(data.estimatedWaitMinutes);
         }
         if (data.status) {
           setQueueStatus(data.status);
@@ -327,7 +327,7 @@ export const useQueueWebSocket = (patientId: string) => {
     const handlePositionUpdate = (data: PositionUpdate) => {
       console.log('Position update received:', data);
       setQueuePosition(data.position);
-      setEstimatedWait(data.estimatedWait);
+      setEstimatedWait(data.estimatedWaitMinutes);
     };
 
     const handleStatusChange = (data: QueueUpdate) => {

@@ -38,7 +38,7 @@ export const useStaffAuth = () => {
       
       if (result.success) {
         setIsAuthenticated(true);
-        setUsername(result.data?.username || null);
+        setUsername(result.data?.user.username || null);
         return { success: true };
       } else {
         return { 

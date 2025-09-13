@@ -34,7 +34,7 @@ class StaffApiService {
       if (data.success && data.data?.token) {
         // Store token in localStorage
         localStorage.setItem('staffToken', data.data.token);
-        localStorage.setItem('staffUsername', data.data.username);
+        localStorage.setItem('staffUsername', data.data.user.username);
         localStorage.setItem('staffExpiresAt', data.data.expiresAt);
       }
 

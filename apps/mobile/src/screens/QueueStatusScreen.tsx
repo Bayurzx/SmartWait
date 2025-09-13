@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { QueueStatus } from '../types';
+import { QueueStatus, ApiResponse } from '../types';
 import { apiService } from '../services/api';
 import { webSocketService, QueueUpdate, PositionUpdate } from '../services/websocket';
 import { configService } from '../services/config';
@@ -50,16 +50,17 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
       apiService['baseUrl'] = apiUrl;
     }
 
+    // FIX 1: Use connectAsPatient instead of private connect method
     // Initialize WebSocket connection
     try {
-      await webSocketService.connect();
+      await webSocketService.connectAsPatient(patientId);
       webSocketService.joinPatientRoom(patientId);
       setConnectionStatus('connected');
-      
+
       // Set up real-time event listeners
       webSocketService.onQueueUpdate(handleQueueUpdate);
       webSocketService.onPositionUpdate(handlePositionUpdate);
-      
+
       console.log('WebSocket services initialized');
     } catch (error) {
       console.error('Failed to initialize WebSocket:', error);
@@ -68,18 +69,18 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
 
     // Fetch initial queue status
     await fetchQueueStatus();
-    
+
     // Set up polling as fallback using configuration
-    const pollInterval = webSocketService.isConnected() 
-      ? configService.getPollingInterval() 
+    const pollInterval = webSocketService.isConnected()
+      ? configService.getPollingInterval()
       : configService.getFallbackPollingInterval();
-    
+
     const interval = setInterval(() => {
       if (!webSocketService.isConnected()) {
         fetchQueueStatus();
       }
     }, pollInterval);
-    
+
     return () => clearInterval(interval);
   };
 
@@ -92,21 +93,21 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
 
   const handleQueueUpdate = useCallback((update: QueueUpdate) => {
     console.log('Received queue update:', update);
-    
+
     if (update.patientId === patientId) {
       setQueueStatus(prevStatus => {
         if (!prevStatus) return prevStatus;
-        
+
         return {
           ...prevStatus,
           position: update.newPosition ?? prevStatus.position,
-          estimatedWait: update.estimatedWait ?? prevStatus.estimatedWait,
+          estimatedWaitMinutes: update.estimatedWaitMinutes ?? prevStatus.estimatedWaitMinutes,
           status: update.status ?? prevStatus.status,
         };
       });
-      
+
       setLastUpdate(new Date());
-      
+
       // Show notification for important updates
       if (update.type === 'patient_called' && update.status === 'called') {
         Alert.alert(
@@ -127,18 +128,27 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
       return {
         ...prevStatus,
         position: update.position,
-        estimatedWait: update.estimatedWait,
+        estimatedWaitMinutes: update.estimatedWaitMinutes,
       };
     });
     
     setLastUpdate(new Date());
   }, []);
 
+  // FIX 2: Extract the correct status from the connection status object
   // Monitor WebSocket connection status
   useEffect(() => {
     const checkConnectionStatus = () => {
       const status = webSocketService.getConnectionStatus();
-      setConnectionStatus(status);
+
+      // Convert the status object to the string type expected by the state
+      if (status.connected) {
+        setConnectionStatus('connected');
+      } else if (status.connecting) {
+        setConnectionStatus('connecting');
+      } else {
+        setConnectionStatus('disconnected');
+      }
     };
 
     const statusInterval = setInterval(checkConnectionStatus, 5000);
@@ -160,14 +170,22 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
   const fetchQueueStatus = async (showLoading = false) => {
     try {
       if (showLoading) setLoading(true);
-      
-      const response = await apiService.getQueueStatus(patientId);
-      
-      setQueueStatus(response);
+
+      // Cast the response to the correct type
+      const response = (await apiService.getQueueStatus(patientId)) as unknown as ApiResponse<QueueStatus>;
+
+      // Now TypeScript knows about response.success and response.data
+      if (response.success && response.data) {
+        setQueueStatus(response.data);
+      } else {
+        console.error('Failed to fetch queue status:', response.message);
+        // Handle error case appropriately
+      }
+
       setLastUpdate(new Date());
     } catch (error) {
       console.error('Queue status error:', error);
-      
+
       if (!queueStatus) {
         // Only show error if we don't have any previous data
         Alert.alert(
@@ -183,7 +201,7 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  };  
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -212,6 +230,7 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
 
   const getStatusMessage = () => {
     if (!queueStatus) return 'Loading your queue status...';
+    console.log("queueStatus", queueStatus);
     
     switch (queueStatus.status) {
       case 'waiting':
@@ -228,7 +247,7 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
   const getEstimatedWaitText = () => {
     if (!queueStatus || queueStatus.status !== 'waiting') return null;
     
-    const minutes = queueStatus.estimatedWait;
+    const minutes = queueStatus.estimatedWaitMinutes;
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
     
@@ -321,7 +340,7 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
           
           {queueStatus && queueStatus.status === 'waiting' && (
             <>
-              <Text style={styles.estimatedWait}>
+              <Text style={styles.estimatedWaitMinutes}>
                 {getEstimatedWaitText()}
               </Text>
               <Text style={styles.helpText}>
@@ -468,7 +487,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
-  estimatedWait: {
+  estimatedWaitMinutes: {
     fontSize: 16,
     color: '#6B7280',
     textAlign: 'center',

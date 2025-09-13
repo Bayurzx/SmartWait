@@ -15,9 +15,15 @@ export interface StaffLoginResponse {
   success: boolean;
   data?: {
     token: string;
-    username: string;
+    user: {
+      id: string;
+      username: string;
+      role: string;
+    };
     expiresAt: string;
+    expiresIn: string;
   };
+  message?: string;
   error?: {
     code: string;
     message: string;
