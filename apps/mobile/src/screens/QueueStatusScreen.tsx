@@ -34,15 +34,41 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
   const [patientPhone, setPatientPhone] = useState<string>('');
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('disconnected');
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [timeSinceLastUpdate, setTimeSinceLastUpdate] = useState<string>('0 seconds ago');
 
   useEffect(() => {
     loadPatientInfo();
     initializeServices();
-    
+
     return () => {
       cleanupServices();
     };
   }, [patientId]);
+
+  // Add useEffect to update timeSinceLastUpdate every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimeSinceLastUpdate(formatTimeSinceLastUpdate());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [lastUpdate]);
+
+  const formatTimeSinceLastUpdate = (): string => {
+    const now = new Date();
+    const diffMs = now.getTime() - lastUpdate.getTime();
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+
+    if (diffSeconds < 60) {
+      return `${diffSeconds} second${diffSeconds !== 1 ? 's' : ''} ago`;
+    } else if (diffMinutes < 60) {
+      return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+    } else {
+      const diffHours = Math.floor(diffMinutes / 60);
+      return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    }
+  };
 
   const initializeServices = async () => {
     // Configure API service
@@ -106,8 +132,6 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
         };
       });
 
-      setLastUpdate(new Date());
-
       // Show notification for important updates
       if (update.type === 'patient_called' && update.status === 'called') {
         Alert.alert(
@@ -121,18 +145,16 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
 
   const handlePositionUpdate = useCallback((update: PositionUpdate) => {
     console.log('Received position update:', update);
-    
+
     setQueueStatus(prevStatus => {
       if (!prevStatus) return prevStatus;
-      
+
       return {
         ...prevStatus,
         position: update.position,
         estimatedWaitMinutes: update.estimatedWaitMinutes,
       };
     });
-    
-    setLastUpdate(new Date());
   }, []);
 
   // FIX 2: Extract the correct status from the connection status object
@@ -159,7 +181,7 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
     try {
       const name = await AsyncStorage.getItem('patientName');
       const phone = await AsyncStorage.getItem('patientPhone');
-      
+
       if (name) setPatientName(name);
       if (phone) setPatientPhone(phone);
     } catch (error) {
@@ -167,7 +189,7 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
     }
   };
 
-  const fetchQueueStatus = async (showLoading = false) => {
+  const fetchQueueStatus = async (showLoading = false, updateTimestamp = false) => {
     try {
       if (showLoading) setLoading(true);
 
@@ -182,7 +204,12 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
         // Handle error case appropriately
       }
 
-      setLastUpdate(new Date());
+      // Only update lastUpdate if explicitly requested
+      if (updateTimestamp) {
+        const newUpdateTime = new Date();
+        setLastUpdate(newUpdateTime);
+        setTimeSinceLastUpdate('0 seconds ago'); // Reset counter immediately
+      }
     } catch (error) {
       console.error('Queue status error:', error);
 
@@ -201,11 +228,15 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
       setLoading(false);
       setRefreshing(false);
     }
-  };  
+  };
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchQueueStatus();
+    fetchQueueStatus(false, false); // Don't update timestamp on pull-to-refresh
+  };
+
+  const handleRefreshButtonClick = () => {
+    fetchQueueStatus(true, true); // Update timestamp when refresh button is clicked
   };
 
   const handleNewCheckIn = async () => {
@@ -231,7 +262,7 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
   const getStatusMessage = () => {
     if (!queueStatus) return 'Loading your queue status...';
     console.log("queueStatus", queueStatus);
-    
+
     switch (queueStatus.status) {
       case 'waiting':
         return `You are #${queueStatus.position} in line`;
@@ -246,11 +277,11 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
 
   const getEstimatedWaitText = () => {
     if (!queueStatus || queueStatus.status !== 'waiting') return null;
-    
+
     const minutes = queueStatus.estimatedWaitMinutes;
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
-    
+
     if (hours > 0) {
       return `Estimated wait: ${hours}h ${remainingMinutes}m`;
     }
@@ -259,7 +290,7 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
 
   const getStatusColor = () => {
     if (!queueStatus) return '#6B7280';
-    
+
     switch (queueStatus.status) {
       case 'waiting':
         return '#2563EB';
@@ -298,21 +329,6 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
     }
   };
 
-  const formatLastUpdate = () => {
-    const now = new Date();
-    const diffMs = now.getTime() - lastUpdate.getTime();
-    const diffSeconds = Math.floor(diffMs / 1000);
-    const diffMinutes = Math.floor(diffSeconds / 60);
-
-    if (diffSeconds < 60) {
-      return `${diffSeconds} seconds ago`;
-    } else if (diffMinutes < 60) {
-      return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
-    } else {
-      return lastUpdate.toLocaleTimeString();
-    }
-  };
-
   if (loading && !queueStatus) {
     return (
       <View style={styles.loadingContainer}>
@@ -331,13 +347,13 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
     >
       <View style={styles.content}>
         <Text style={styles.title}>Queue Status</Text>
-        
+
         {/* Main Status Card */}
         <View style={[styles.statusCard, { borderLeftColor: getStatusColor() }]}>
           <Text style={[styles.statusMessage, { color: getStatusColor() }]}>
             {getStatusMessage()}
           </Text>
-          
+
           {queueStatus && queueStatus.status === 'waiting' && (
             <>
               <Text style={styles.estimatedWaitMinutes}>
@@ -348,7 +364,7 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
               </Text>
             </>
           )}
-          
+
           {queueStatus && queueStatus.status === 'called' && (
             <Text style={styles.urgentText}>
               Please head to the facility now!
@@ -369,7 +385,7 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
             {getConnectionText()}
           </Text>
           <Text style={styles.lastUpdateText}>
-            Last updated: {formatLastUpdate()}
+            Last updated: {timeSinceLastUpdate}
           </Text>
         </View>
 
@@ -400,8 +416,8 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
             • Pull down to refresh your queue status
           </Text>
           <Text style={styles.instructionsText}>
-            • {connectionStatus === 'connected' 
-              ? 'Your position updates automatically in real-time' 
+            • {connectionStatus === 'connected'
+              ? 'Your position updates automatically in real-time'
               : `Your position updates automatically every ${configService.getFallbackPollingInterval() / 1000} seconds`}
           </Text>
           <Text style={styles.instructionsText}>
@@ -421,7 +437,7 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={styles.refreshButton}
-            onPress={() => fetchQueueStatus(true)}
+            onPress={handleRefreshButtonClick}
             disabled={loading}
           >
             {loading ? (
@@ -430,7 +446,7 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
               <Text style={styles.refreshButtonText}>Refresh Status</Text>
             )}
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.newCheckInButton}
             onPress={handleNewCheckIn}
