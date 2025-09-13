@@ -1,3 +1,4 @@
+// apps\mobile\src\services\navigation.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type AppScreen = 'checkin' | 'queue' | 'loading';

@@ -1,3 +1,4 @@
+// apps\mobile\src\services\config.ts
 import Constants from 'expo-constants';
 
 export interface AppConfig {

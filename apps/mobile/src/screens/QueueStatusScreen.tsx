@@ -195,6 +195,8 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
 
       // Cast the response to the correct type
       const response = (await apiService.getQueueStatus(patientId)) as unknown as ApiResponse<QueueStatus>;
+      console.log("response", response);
+      
 
       // Now TypeScript knows about response.success and response.data
       if (response.success && response.data) {
