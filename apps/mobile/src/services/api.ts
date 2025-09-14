@@ -1,4 +1,5 @@
 // apps\mobile\src\services\api.ts - FIXED VERSION
+// apps\mobile\src\services\api.ts - FIXED VERSION
 import { CheckInData, CheckInResponse, QueueStatus, ApiError } from '../types';
 import { configService } from './config';
 
@@ -151,12 +152,27 @@ export class ApiService {
         throw new Error('Device ID is required');
       }
 
-      const response = await this.makeRequestInternal<SavedCheckin[]>(
+      const response = await this.makeRequestInternal<any>(
         `/api/v1/checkin-history?deviceId=${encodeURIComponent(deviceId)}`
       );
 
-      // Response should already be extracted by makeRequestInternal
-      return Array.isArray(response) ? response : [];
+      console.log('Raw getSavedCheckins response:', response);
+
+      // CRITICAL FIX: Handle both wrapped and unwrapped responses
+      if (response && typeof response === 'object') {
+        if ('data' in response && Array.isArray(response.data)) {
+          // Response is wrapped: {data: [...], meta: {...}}
+          console.log('Extracting data array from wrapped response:', response.data.length);
+          return response.data;
+        } else if (Array.isArray(response)) {
+          // Response is already the array
+          console.log('Using direct array response:', response.length);
+          return response;
+        }
+      }
+
+      console.warn('Unexpected getSavedCheckins response format:', response);
+      return [];
     } catch (error) {
       console.error('Error getting saved check-ins:', error);
       throw new Error('Failed to retrieve saved check-ins');

@@ -1,6 +1,6 @@
 // apps\mobile\src\screens\CheckInScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Alert, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, Alert, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CheckInForm from '../components/CheckInForm';
 import MessageBanner from '../components/MessageBanner';
@@ -17,27 +17,40 @@ interface CheckInScreenProps {
 export const CheckInScreen: React.FC<CheckInScreenProps> = ({
   onCheckInSuccess,
   onShowSavedCheckins,
-  apiUrl = 'http://localhost:3001' // Default API URL
+  apiUrl = 'http://localhost:3001'
 }) => {
   const [loading, setLoading] = useState(false);
+  const [loadingSavedCheckins, setLoadingSavedCheckins] = useState(true);
   const [message, setMessage] = useState<{
     type: 'success' | 'error' | 'info' | 'warning';
     text: string;
   } | null>(null);
-  const [hasSavedCheckins, setHasSavedCheckins] = useState(false);
+  const [savedCheckinsCount, setSavedCheckinsCount] = useState(0);
 
   // Check for saved check-ins on mount
   useEffect(() => {
+    console.log('CheckInScreen mounted, checking for saved check-ins...');
     checkForSavedCheckins();
   }, []);
 
   const checkForSavedCheckins = async () => {
     try {
+      setLoadingSavedCheckins(true);
+      console.log('Fetching saved check-ins...');
+
+      // Configure API service
+      if (apiUrl) {
+        apiService.updateBaseUrl(apiUrl);
+      }
+
       const savedCheckins = await checkinHistoryService.getSavedCheckins();
-      setHasSavedCheckins(savedCheckins.length > 0);
+      console.log('Found saved check-ins:', savedCheckins.length);
+      setSavedCheckinsCount(savedCheckins.length);
     } catch (error) {
       console.error('Error checking for saved check-ins:', error);
-      // Don't show error to user, this is non-critical
+      setSavedCheckinsCount(0);
+    } finally {
+      setLoadingSavedCheckins(false);
     }
   };
 
@@ -47,15 +60,15 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
     try {
       // Configure API service with the provided URL
       if (apiUrl) {
-        apiService['baseUrl'] = apiUrl;
+        apiService.updateBaseUrl(apiUrl);
       }
 
-      // Make API call to check in using the service
+      console.log('Submitting check-in with data:', formData);
       const checkInResponse = await apiService.checkIn(formData);
       console.log('Check-in response:', checkInResponse);
 
       if (checkInResponse.patientId) {
-        // CRITICAL FIX: Store patient ID immediately after successful check-in
+        // Store patient ID immediately after successful check-in
         await AsyncStorage.setItem('patientId', checkInResponse.patientId);
         await AsyncStorage.setItem('patientName', formData.name);
         await AsyncStorage.setItem('patientPhone', formData.phone);
@@ -74,15 +87,19 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
         // Save to server history if available
         try {
           const deviceId = await checkinHistoryService.getDeviceId();
-          await checkinHistoryService.saveCheckin({
+          console.log('Saving to server with deviceId:', deviceId);
+
+          const savedCheckin = await checkinHistoryService.saveCheckin({
             patientId: checkInResponse.patientId,
             deviceId,
             patientName: formData.name,
-            facilityName: 'Healthcare Facility', // Could be dynamic
+            facilityName: 'Healthcare Facility',
           });
 
-          // Update saved check-ins state
-          setHasSavedCheckins(true);
+          console.log('Successfully saved to server:', savedCheckin);
+
+          // Update saved check-ins count
+          setSavedCheckinsCount(prev => prev + 1);
         } catch (historyError) {
           console.warn('Failed to save to server history:', historyError);
           // Don't fail the check-in if history save fails
@@ -127,6 +144,65 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
     }
   };
 
+  const renderSavedCheckinsSection = () => {
+    if (!onShowSavedCheckins) return null;
+
+    if (loadingSavedCheckins) {
+      return (
+        <View style={styles.savedCheckinsSection}>
+          <View style={styles.loadingRow}>
+            <ActivityIndicator size="small" color="#2563EB" />
+            <Text style={styles.loadingText}>Checking for saved check-ins...</Text>
+          </View>
+        </View>
+      );
+    }
+    console.log('CheckInScreen render - savedCheckinsCount:', savedCheckinsCount, 'onShowSavedCheckins:', !!onShowSavedCheckins);
+    if (savedCheckinsCount > 0) {
+      return (
+        <View style={styles.savedCheckinsSection}>
+          <Text style={styles.sectionTitle}>Previous Check-ins</Text>
+          <Text style={styles.sectionDescription}>
+            You have {savedCheckinsCount} saved check-in{savedCheckinsCount !== 1 ? 's' : ''} from previous visits. Access them to quickly view their status.
+          </Text>
+
+          <TouchableOpacity
+            style={styles.savedCheckinsButton}
+            onPress={() => {
+              console.log('Navigating to saved check-ins...');
+              onShowSavedCheckins();
+            }}
+          >
+            <Text style={styles.savedCheckinsButtonText}>
+              View {savedCheckinsCount} Saved Check-in{savedCheckinsCount !== 1 ? 's' : ''}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.savedCheckinsSection}>
+        <Text style={styles.sectionTitle}>Previous Check-ins</Text>
+        <Text style={styles.sectionDescription}>
+          When you check in, we'll save it here so you can easily access it later from any device.
+        </Text>
+
+        <TouchableOpacity
+          style={[styles.savedCheckinsButton, styles.savedCheckinsButtonEmpty]}
+          onPress={() => {
+            console.log('Showing empty saved check-ins...');
+            onShowSavedCheckins();
+          }}
+        >
+          <Text style={styles.savedCheckinsButtonEmptyText}>
+            View Saved Check-ins
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       {message && (
@@ -143,43 +219,7 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
       <View style={styles.content}>
         <CheckInForm onSubmit={handleCheckIn} loading={loading} />
 
-        {/* Show saved check-ins section if available */}
-        {(onShowSavedCheckins && hasSavedCheckins) && (
-          <View style={styles.savedCheckinsSection}>
-            <Text style={styles.sectionTitle}>Previous Check-ins</Text>
-            <Text style={styles.sectionDescription}>
-              You have saved check-ins from previous visits. Access them to quickly view their status.
-            </Text>
-
-            <TouchableOpacity
-              style={styles.savedCheckinsButton}
-              onPress={onShowSavedCheckins}
-            >
-              <Text style={styles.savedCheckinsButtonText}>
-                View Saved Check-ins ({hasSavedCheckins ? 'Available' : 'None'})
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Show empty state with link to saved check-ins if handler is available */}
-        {(onShowSavedCheckins && !hasSavedCheckins) && (
-          <View style={styles.savedCheckinsSection}>
-            <Text style={styles.sectionTitle}>Previous Check-ins</Text>
-            <Text style={styles.sectionDescription}>
-              When you check in, we'll save it here so you can easily access it later from any device.
-            </Text>
-
-            <TouchableOpacity
-              style={[styles.savedCheckinsButton, styles.savedCheckinsButtonEmpty]}
-              onPress={onShowSavedCheckins}
-            >
-              <Text style={styles.savedCheckinsButtonEmptyText}>
-                View Saved Check-ins
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        {renderSavedCheckinsSection()}
       </View>
     </View>
   );
@@ -242,6 +282,16 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     fontSize: 16,
     fontWeight: '500',
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#6B7280',
   },
 });
 

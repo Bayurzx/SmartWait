@@ -502,14 +502,17 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
           {/* Enhanced New Check-in Button */}
           <TouchableOpacity
             style={styles.newCheckInButton}
-            onPress={() => {
-              console.log('New Check-in TouchableOpacity pressed!');
-              handleNewCheckIn();
+            onPress={async () => {
+              console.log('New Check-in button pressed - bypassing Alert for now');
+              try {
+                await AsyncStorage.multiRemove(['patientId', 'patientName', 'patientPhone']);
+                console.log('AsyncStorage cleared, navigating to check-in...');
+                onBackToCheckIn();
+              } catch (error) {
+                console.error('Error clearing storage:', error);
+                onBackToCheckIn();
+              }
             }}
-            activeOpacity={0.7}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Start new check-in"
           >
             <Text style={styles.newCheckInButtonText}>New Check-in</Text>
           </TouchableOpacity>
