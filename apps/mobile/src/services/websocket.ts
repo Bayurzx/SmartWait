@@ -33,6 +33,18 @@ export class WebSocketService {
 
   // Connect as a patient with patientId
   connectAsPatient(patientId: string): Promise<void> {
+    // Validate patientId format (basic validation)
+    if (!patientId || patientId.trim().length === 0) {
+      return Promise.reject(new Error('Invalid patient ID: Patient ID cannot be empty'));
+    }
+
+    // Check if it's a valid UUID format (basic check)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(patientId)) {
+      console.warn('Patient ID may not be in UUID format:', patientId);
+      // Don't reject here - let the server handle validation
+    }
+
     this.patientId = patientId;
     this.authToken = null;
     return this.connect();
@@ -40,6 +52,10 @@ export class WebSocketService {
 
   // Connect as staff with token
   connectAsStaff(token: string): Promise<void> {
+    if (!token || token.trim().length === 0) {
+      return Promise.reject(new Error('Invalid token: Token cannot be empty'));
+    }
+
     this.authToken = token;
     this.patientId = null;
     return this.connect();
@@ -85,13 +101,19 @@ export class WebSocketService {
           auth.token = this.authToken;
         }
 
+        console.log('Connecting to WebSocket with auth:', {
+          hasPatientId: !!this.patientId,
+          hasToken: !!this.authToken,
+          patientIdLength: this.patientId?.length || 0
+        });
+
         this.socket = io(this.baseUrl, {
           transports: ['websocket', 'polling'],
           timeout: 20000,
           forceNew: true,
           auth,
-          reconnection: true,
-          reconnectionAttempts: this.maxReconnectAttempts,
+          reconnection: false, // We handle reconnection manually
+          reconnectionAttempts: 0,
           reconnectionDelay: this.reconnectDelay,
         });
 
@@ -123,18 +145,25 @@ export class WebSocketService {
           console.error('WebSocket connection error:', error);
           this.isConnecting = false;
 
-          // Check if it's an authentication error
-          if (error.message.includes('Authentication')) {
+          // Enhanced error handling
+          let errorMessage = error.message || 'Connection failed';
+
+          if (errorMessage.includes('Authentication') || errorMessage.includes('Invalid patient ID')) {
             console.error('Authentication failed - check patientId/token validity');
-            reject(new Error(`Authentication failed: ${error.message}`));
+            reject(new Error(`Authentication failed: ${errorMessage}`));
             return;
+          }
+
+          if (errorMessage.includes('timeout')) {
+            errorMessage = 'Connection timeout - server may be unavailable';
           }
 
           this.reconnectAttempts++;
 
           if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            reject(new Error(`Failed to connect after ${this.maxReconnectAttempts} attempts: ${error.message}`));
+            reject(new Error(`Failed to connect after ${this.maxReconnectAttempts} attempts: ${errorMessage}`));
           } else {
+            console.log(`Connection attempt ${this.reconnectAttempts} failed, will retry...`);
             this.scheduleReconnect();
           }
         });
@@ -176,12 +205,14 @@ export class WebSocketService {
       return;
     }
 
-    const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts);
+    const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts), 30000); // Cap at 30 seconds
     console.log(`Scheduling reconnection attempt ${this.reconnectAttempts + 1} in ${delay}ms`);
 
     setTimeout(() => {
-      if (!this.socket?.connected) {
-        this.connect(); // Will use stored credentials
+      if (!this.socket?.connected && (this.patientId || this.authToken)) {
+        this.connect().catch(error => {
+          console.error('Reconnection attempt failed:', error);
+        });
       }
     }, delay);
   }

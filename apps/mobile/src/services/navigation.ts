@@ -1,7 +1,7 @@
 // apps\mobile\src\services\navigation.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type AppScreen = 'checkin' | 'queue' | 'loading';
+export type AppScreen = 'checkin' | 'queue' | 'saved-checkins' | 'loading';
 
 export interface NavigationState {
   currentScreen: AppScreen;
@@ -20,7 +20,7 @@ export class NavigationService {
     return NavigationService.instance;
   }
 
-  private constructor() {}
+  private constructor() { }
 
   getCurrentState(): NavigationState {
     return { ...this.currentState };
@@ -28,7 +28,7 @@ export class NavigationService {
 
   subscribe(listener: (state: NavigationState) => void): () => void {
     this.listeners.push(listener);
-    
+
     // Return unsubscribe function
     return () => {
       const index = this.listeners.indexOf(listener);
@@ -45,7 +45,7 @@ export class NavigationService {
   async initializeNavigation(): Promise<void> {
     try {
       const storedPatientId = await AsyncStorage.getItem('patientId');
-      
+
       if (storedPatientId) {
         this.currentState = {
           currentScreen: 'queue',
@@ -62,7 +62,7 @@ export class NavigationService {
         currentScreen: 'checkin',
       };
     }
-    
+
     this.notifyListeners();
   }
 
@@ -84,7 +84,7 @@ export class NavigationService {
       await AsyncStorage.removeItem('patientId');
       await AsyncStorage.removeItem('patientName');
       await AsyncStorage.removeItem('patientPhone');
-      
+
       this.currentState = {
         currentScreen: 'checkin',
       };
@@ -92,6 +92,13 @@ export class NavigationService {
     } catch (error) {
       console.error('Error navigating to check-in:', error);
     }
+  }
+
+  navigateToSavedCheckins(): void {
+    this.currentState = {
+      currentScreen: 'saved-checkins',
+    };
+    this.notifyListeners();
   }
 
   setLoading(): void {

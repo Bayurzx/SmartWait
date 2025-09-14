@@ -1,25 +1,26 @@
 // apps\mobile\App.tsx
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View, Text, ActivityIndicator } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { PaperProvider } from 'react-native-paper';
-
-import { CheckInScreen } from './src/screens/CheckInScreen';
-import { QueueStatusScreen } from './src/screens/QueueStatusScreen';
-import { navigationService, NavigationState } from './src/services/navigation';
-import { configService } from './src/services/config';
+import { View, StyleSheet } from 'react-native';
+import CheckInScreen from './src/screens/CheckInScreen';
+import QueueStatusScreen from './src/screens/QueueStatusScreen';
+import { SavedCheckinsScreen } from './src/screens/SavedCheckinsScreen';
+import { navigationService, AppScreen } from './src/services/navigation';
 
 export default function App() {
-  const [navigationState, setNavigationState] = useState<NavigationState>({ currentScreen: 'loading' });
+  const [currentScreen, setCurrentScreen] = useState<AppScreen>('loading');
+  const [patientId, setPatientId] = useState<string | undefined>();
 
   useEffect(() => {
-    // Subscribe to navigation changes
-    const unsubscribe = navigationService.subscribe(setNavigationState);
-    
-    // Initialize navigation
+    // Initialize navigation and listen for changes
+    const unsubscribe = navigationService.subscribe((state) => {
+      setCurrentScreen(state.currentScreen);
+      setPatientId(state.patientId);
+    });
+
+    // Initialize the app
     navigationService.initializeNavigation();
-    
+
     return unsubscribe;
   }, []);
 
@@ -31,45 +32,55 @@ export default function App() {
     navigationService.navigateToCheckIn();
   };
 
+  const handleShowSavedCheckins = () => {
+    navigationService.navigateToSavedCheckins();
+  };
+
+  const handleSelectSavedCheckin = (savedPatientId: string) => {
+    navigationService.navigateToQueue(savedPatientId);
+  };
+
   const renderCurrentScreen = () => {
-    switch (navigationState.currentScreen) {
+    switch (currentScreen) {
       case 'checkin':
         return (
-          <CheckInScreen 
+          <CheckInScreen
             onCheckInSuccess={handleCheckInSuccess}
-            apiUrl={configService.getApiUrl()}
+            onShowSavedCheckins={handleShowSavedCheckins}
           />
         );
-      
+
       case 'queue':
-        return (
+        return patientId ? (
           <QueueStatusScreen
-            patientId={navigationState.patientId || ''}
+            patientId={patientId}
             onBackToCheckIn={handleBackToCheckIn}
-            apiUrl={configService.getApiUrl()}
+          />
+        ) : null;
+
+      case 'saved-checkins':
+        return (
+          <SavedCheckinsScreen
+            onSelectCheckin={handleSelectSavedCheckin}
+            onBackToCheckIn={handleBackToCheckIn}
           />
         );
-      
+
       case 'loading':
       default:
         return (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#2563EB" />
-            <Text style={styles.loadingText}>Loading SmartWait...</Text>
+            {/* Loading indicator would go here */}
           </View>
         );
     }
   };
 
   return (
-    <SafeAreaProvider>
-      <PaperProvider>
-        <SafeAreaView style={styles.container}>
-          {renderCurrentScreen()}
-          <StatusBar style="auto" />
-        </SafeAreaView>
-      </PaperProvider>
-    </SafeAreaProvider>
+    <View style={styles.container}>
+      <StatusBar style="auto" />
+      {renderCurrentScreen()}
+    </View>
   );
 }
 
@@ -82,12 +93,5 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#6B7280',
-    fontWeight: '500',
   },
 });
