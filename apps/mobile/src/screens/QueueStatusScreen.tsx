@@ -499,13 +499,47 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
             )}
           </TouchableOpacity>
 
+          {/* Enhanced New Check-in Button */}
           <TouchableOpacity
             style={styles.newCheckInButton}
-            onPress={handleNewCheckIn}
+            onPress={() => {
+              console.log('New Check-in TouchableOpacity pressed!');
+              handleNewCheckIn();
+            }}
+            activeOpacity={0.7}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Start new check-in"
           >
             <Text style={styles.newCheckInButtonText}>New Check-in</Text>
           </TouchableOpacity>
+
+          {/* DEBUG: Test button - REMOVE after fixing */}
+          <TouchableOpacity
+            style={[styles.newCheckInButton, {
+              backgroundColor: '#DC2626',
+              marginTop: 8,
+              borderWidth: 2,
+              borderColor: '#FFF'
+            }]}
+            onPress={async () => {
+              console.log('🔴 DEBUG BUTTON PRESSED - Direct navigation');
+              try {
+                await AsyncStorage.multiRemove(['patientId', 'patientName', 'patientPhone']);
+                console.log('🔴 Storage cleared, navigating...');
+                onBackToCheckIn();
+              } catch (error) {
+                console.error('🔴 Debug button error:', error);
+                onBackToCheckIn();
+              }
+            }}
+          >
+            <Text style={[styles.newCheckInButtonText, { fontWeight: 'bold' }]}>
+              🔴 TEST BUTTON - FORCE NAVIGATE
+            </Text>
+          </TouchableOpacity>
         </View>
+
       </View>
     </ScrollView>
   );
