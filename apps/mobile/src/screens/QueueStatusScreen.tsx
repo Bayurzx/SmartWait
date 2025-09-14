@@ -272,23 +272,43 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
   };
 
   const handleNewCheckIn = async () => {
-    Alert.alert(
-      'New Check-in',
-      'This will clear your current queue position and start a new check-in. Are you sure?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Yes, New Check-in',
-          style: 'destructive',
-          onPress: async () => {
-            await AsyncStorage.removeItem('patientId');
-            await AsyncStorage.removeItem('patientName');
-            await AsyncStorage.removeItem('patientPhone');
-            onBackToCheckIn();
+    console.log('New Check-in button pressed');
+
+    try {
+      Alert.alert(
+        'New Check-in',
+        'This will clear your current queue position and start a new check-in. Are you sure?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Yes, New Check-in',
+            style: 'destructive',
+            onPress: async () => {
+              console.log('User confirmed new check-in, clearing data...');
+              try {
+                await AsyncStorage.multiRemove(['patientId', 'patientName', 'patientPhone']);
+                console.log('AsyncStorage cleared, calling onBackToCheckIn...');
+                onBackToCheckIn();
+              } catch (error) {
+                console.error('Error clearing AsyncStorage:', error);
+                // Still navigate even if clearing fails
+                onBackToCheckIn();
+              }
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    } catch (error) {
+      console.error('Error showing alert:', error);
+      // Fallback: directly navigate without confirmation
+      try {
+        await AsyncStorage.multiRemove(['patientId', 'patientName', 'patientPhone']);
+        onBackToCheckIn();
+      } catch (storageError) {
+        console.error('Error in fallback navigation:', storageError);
+        onBackToCheckIn();
+      }
+    }
   };
 
   const getStatusMessage = () => {

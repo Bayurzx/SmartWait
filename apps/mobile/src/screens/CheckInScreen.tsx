@@ -54,7 +54,7 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
       const checkInResponse = await apiService.checkIn(formData);
       console.log('Check-in response:', checkInResponse);
 
-      if (checkInResponse.success && checkInResponse.patientId) {
+      if (checkInResponse.patientId) {
         // CRITICAL FIX: Store patient ID immediately after successful check-in
         await AsyncStorage.setItem('patientId', checkInResponse.patientId);
         await AsyncStorage.setItem('patientName', formData.name);
@@ -80,7 +80,7 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
             patientName: formData.name,
             facilityName: 'Healthcare Facility', // Could be dynamic
           });
-          
+
           // Update saved check-ins state
           setHasSavedCheckins(true);
         } catch (historyError) {
