@@ -1,4 +1,4 @@
-// apps\mobile\src\services\api.ts
+// apps\mobile\src\services\api.ts - FIXED VERSION
 import { CheckInData, CheckInResponse, QueueStatus, ApiError } from '../types';
 import { configService } from './config';
 
@@ -53,6 +53,7 @@ export class ApiService {
     };
 
     try {
+      console.log(`Making API request to: ${url}`);
       const response = await fetch(url, defaultOptions);
 
       // Handle empty responses (like 204 No Content)
@@ -91,8 +92,22 @@ export class ApiService {
         throw new Error(errorMessage);
       }
 
+      // CRITICAL FIX: Auto-extract data from wrapped responses
+      if (data && typeof data === 'object' && 'data' in data && 'success' in data) {
+        // This is a wrapped ApiResponse format
+        const apiResponse = data as ApiResponse<T>;
+        if (apiResponse.success && apiResponse.data) {
+          console.log('Extracted data from wrapped response:', apiResponse.data);
+          return apiResponse.data;
+        } else if (!apiResponse.success) {
+          throw new Error(apiResponse.message || 'API request failed');
+        }
+      }
+
+      console.log('Returning direct response data:', data);
       return data;
     } catch (error) {
+      console.error(`API request failed for ${url}:`, error);
       if (error instanceof TypeError && error.message === 'Network request failed') {
         throw new Error('Unable to connect to the server. Please check your internet connection.');
       }
@@ -101,6 +116,7 @@ export class ApiService {
   }
 
   async checkIn(data: CheckInData): Promise<CheckInResponse> {
+    console.log('Making check-in request with data:', data);
     return this.makeRequestInternal<CheckInResponse>('/api/checkin', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -108,7 +124,14 @@ export class ApiService {
   }
 
   async getQueueStatus(patientId: string): Promise<QueueStatus> {
-    return this.makeRequestInternal<QueueStatus>(`/api/position/${patientId}`);
+    console.log('Getting queue status for patientId:', patientId);
+
+    // Validate patientId before making request
+    if (!patientId || patientId === 'undefined' || patientId.trim() === '') {
+      throw new Error('Invalid patient ID: Patient ID cannot be empty or undefined');
+    }
+
+    return this.makeRequestInternal<QueueStatus>(`/api/position/${encodeURIComponent(patientId)}`);
   }
 
   async healthCheck(): Promise<{ status: string; timestamp: string }> {
@@ -122,10 +145,18 @@ export class ApiService {
    */
   async getSavedCheckins(deviceId: string): Promise<SavedCheckin[]> {
     try {
-      const response = await this.makeRequestInternal<ApiResponse<SavedCheckin[]>>(
+      console.log('Getting saved check-ins for deviceId:', deviceId);
+
+      if (!deviceId || deviceId.trim() === '') {
+        throw new Error('Device ID is required');
+      }
+
+      const response = await this.makeRequestInternal<SavedCheckin[]>(
         `/api/v1/checkin-history?deviceId=${encodeURIComponent(deviceId)}`
       );
-      return response.data || [];
+
+      // Response should already be extracted by makeRequestInternal
+      return Array.isArray(response) ? response : [];
     } catch (error) {
       console.error('Error getting saved check-ins:', error);
       throw new Error('Failed to retrieve saved check-ins');
@@ -142,7 +173,13 @@ export class ApiService {
     facilityName?: string;
   }): Promise<SavedCheckin> {
     try {
-      const response = await this.makeRequestInternal<ApiResponse<SavedCheckin>>(
+      console.log('Saving check-in with data:', data);
+
+      if (!data.patientId || !data.deviceId) {
+        throw new Error('Patient ID and Device ID are required');
+      }
+
+      const response = await this.makeRequestInternal<SavedCheckin>(
         '/api/v1/checkin-history',
         {
           method: 'POST',
@@ -150,11 +187,12 @@ export class ApiService {
         }
       );
 
-      if (!response.data) {
+      // Response should already be extracted by makeRequestInternal
+      if (!response) {
         throw new Error('No data returned from save check-in request');
       }
 
-      return response.data;
+      return response;
     } catch (error) {
       console.error('Error saving check-in:', error);
       throw new Error('Failed to save check-in for future reference');
@@ -166,6 +204,12 @@ export class ApiService {
    */
   async removeSavedCheckin(patientId: string, deviceId: string): Promise<boolean> {
     try {
+      console.log('Removing saved check-in:', { patientId, deviceId });
+
+      if (!patientId || !deviceId) {
+        throw new Error('Patient ID and Device ID are required');
+      }
+
       await this.makeRequestInternal<void>(
         `/api/v1/checkin-history/${encodeURIComponent(patientId)}?deviceId=${encodeURIComponent(deviceId)}`,
         {
@@ -189,6 +233,8 @@ export class ApiService {
     estimatedWait?: number;
   }> {
     try {
+      console.log('Validating saved check-in for patientId:', patientId);
+
       const queueStatus = await this.getQueueStatus(patientId);
       return {
         isValid: true,
@@ -201,6 +247,21 @@ export class ApiService {
       console.log('Saved check-in validation failed:', error);
       return { isValid: false };
     }
+  }
+
+  /**
+   * Update base URL (useful for configuration changes)
+   */
+  updateBaseUrl(newBaseUrl: string): void {
+    this.baseUrl = newBaseUrl;
+    console.log('Updated API base URL to:', newBaseUrl);
+  }
+
+  /**
+   * Get current base URL
+   */
+  getBaseUrl(): string {
+    return this.baseUrl;
   }
 }
 

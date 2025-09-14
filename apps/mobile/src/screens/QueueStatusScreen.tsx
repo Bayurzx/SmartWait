@@ -37,6 +37,20 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
   const [timeSinceLastUpdate, setTimeSinceLastUpdate] = useState<string>('0 seconds ago');
 
   useEffect(() => {
+    // CRITICAL FIX: Validate patientId before proceeding
+    if (!patientId || patientId === 'undefined' || patientId.trim() === '') {
+      console.error('Invalid patientId received:', patientId);
+      Alert.alert(
+        'Invalid Patient ID',
+        'No valid patient ID found. Please check in again.',
+        [
+          { text: 'Back to Check-in', onPress: onBackToCheckIn },
+        ]
+      );
+      return;
+    }
+
+    console.log('QueueStatusScreen initialized with patientId:', patientId);
     loadPatientInfo();
     initializeServices();
 
@@ -76,7 +90,9 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
       apiService['baseUrl'] = apiUrl;
     }
 
-    // FIX 1: Use connectAsPatient instead of private connect method
+    // CRITICAL FIX: Validate patientId before WebSocket connection
+    console.log('Attempting WebSocket connection with patientId:', patientId);
+
     // Initialize WebSocket connection
     try {
       await webSocketService.connectAsPatient(patientId);
@@ -157,7 +173,6 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
     });
   }, []);
 
-  // FIX 2: Extract the correct status from the connection status object
   // Monitor WebSocket connection status
   useEffect(() => {
     const checkConnectionStatus = () => {
@@ -193,18 +208,33 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
     try {
       if (showLoading) setLoading(true);
 
-      // Cast the response to the correct type
-      const response = (await apiService.getQueueStatus(patientId)) as unknown as ApiResponse<QueueStatus>;
-      console.log("response", response);
-      
+      // CRITICAL FIX: Handle both direct QueueStatus and wrapped ApiResponse
+      console.log('Fetching queue status for patientId:', patientId);
+      const response = await apiService.getQueueStatus(patientId);
+      console.log("API response:", response);
 
-      // Now TypeScript knows about response.success and response.data
-      if (response.success && response.data) {
-        setQueueStatus(response.data);
+      // Check if response is wrapped in ApiResponse format
+      let queueData: QueueStatus;
+      if (response && typeof response === 'object') {
+        if ('success' in response && 'data' in response) {
+          // Response is wrapped in ApiResponse
+          const apiResponse = response as ApiResponse<QueueStatus>;
+          if (apiResponse.success && apiResponse.data) {
+            queueData = apiResponse.data;
+          } else {
+            throw new Error(apiResponse.message || 'Failed to fetch queue status');
+          }
+        } else if ('patientId' in response && 'status' in response) {
+          // Response is direct QueueStatus
+          queueData = response as QueueStatus;
+        } else {
+          throw new Error('Unexpected response format');
+        }
       } else {
-        console.error('Failed to fetch queue status:', response.message);
-        // Handle error case appropriately
+        throw new Error('Invalid response format');
       }
+
+      setQueueStatus(queueData);
 
       // Only update lastUpdate if explicitly requested
       if (updateTimestamp) {
@@ -263,7 +293,7 @@ export const QueueStatusScreen: React.FC<QueueStatusScreenProps> = ({
 
   const getStatusMessage = () => {
     if (!queueStatus) return 'Loading your queue status...';
-    console.log("queueStatus", queueStatus);
+    console.log("queueStatus in getStatusMessage:", queueStatus);
 
     switch (queueStatus.status) {
       case 'waiting':

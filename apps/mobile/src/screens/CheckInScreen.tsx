@@ -1,5 +1,5 @@
 // apps\mobile\src\screens\CheckInScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Alert, TouchableOpacity, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CheckInForm from '../components/CheckInForm';
@@ -24,6 +24,22 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
     type: 'success' | 'error' | 'info' | 'warning';
     text: string;
   } | null>(null);
+  const [hasSavedCheckins, setHasSavedCheckins] = useState(false);
+
+  // Check for saved check-ins on mount
+  useEffect(() => {
+    checkForSavedCheckins();
+  }, []);
+
+  const checkForSavedCheckins = async () => {
+    try {
+      const savedCheckins = await checkinHistoryService.getSavedCheckins();
+      setHasSavedCheckins(savedCheckins.length > 0);
+    } catch (error) {
+      console.error('Error checking for saved check-ins:', error);
+      // Don't show error to user, this is non-critical
+    }
+  };
 
   const handleCheckIn = async (formData: CheckInData): Promise<void> => {
     setLoading(true);
@@ -36,14 +52,17 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
 
       // Make API call to check in using the service
       const checkInResponse = await apiService.checkIn(formData);
+      console.log('Check-in response:', checkInResponse);
 
-      if (checkInResponse.success) {
-        // Store patient ID for future reference
+      if (checkInResponse.success && checkInResponse.patientId) {
+        // CRITICAL FIX: Store patient ID immediately after successful check-in
         await AsyncStorage.setItem('patientId', checkInResponse.patientId);
         await AsyncStorage.setItem('patientName', formData.name);
         await AsyncStorage.setItem('patientPhone', formData.phone);
 
-        // Store check-in in history service
+        console.log('Stored patientId:', checkInResponse.patientId);
+
+        // Store check-in in local history service
         await checkinHistoryService.storeCheckinLocally({
           patientId: checkInResponse.patientId,
           patientName: formData.name,
@@ -54,12 +73,16 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
 
         // Save to server history if available
         try {
+          const deviceId = await checkinHistoryService.getDeviceId();
           await checkinHistoryService.saveCheckin({
             patientId: checkInResponse.patientId,
-            deviceId: await checkinHistoryService.getDeviceId(),
+            deviceId,
             patientName: formData.name,
             facilityName: 'Healthcare Facility', // Could be dynamic
           });
+          
+          // Update saved check-ins state
+          setHasSavedCheckins(true);
         } catch (historyError) {
           console.warn('Failed to save to server history:', historyError);
           // Don't fail the check-in if history save fails
@@ -76,7 +99,7 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
           onCheckInSuccess(checkInResponse.patientId);
         }, 3000);
       } else {
-        throw new Error('Check-in failed');
+        throw new Error('Check-in failed - no patient ID returned');
       }
     } catch (error) {
       console.error('Check-in error:', error);
@@ -120,11 +143,12 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
       <View style={styles.content}>
         <CheckInForm onSubmit={handleCheckIn} loading={loading} />
 
-        {onShowSavedCheckins && (
+        {/* Show saved check-ins section if available */}
+        {(onShowSavedCheckins && hasSavedCheckins) && (
           <View style={styles.savedCheckinsSection}>
             <Text style={styles.sectionTitle}>Previous Check-ins</Text>
             <Text style={styles.sectionDescription}>
-              Have you checked in before? Access your saved check-ins to quickly view their status.
+              You have saved check-ins from previous visits. Access them to quickly view their status.
             </Text>
 
             <TouchableOpacity
@@ -132,6 +156,25 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
               onPress={onShowSavedCheckins}
             >
               <Text style={styles.savedCheckinsButtonText}>
+                View Saved Check-ins ({hasSavedCheckins ? 'Available' : 'None'})
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Show empty state with link to saved check-ins if handler is available */}
+        {(onShowSavedCheckins && !hasSavedCheckins) && (
+          <View style={styles.savedCheckinsSection}>
+            <Text style={styles.sectionTitle}>Previous Check-ins</Text>
+            <Text style={styles.sectionDescription}>
+              When you check in, we'll save it here so you can easily access it later from any device.
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.savedCheckinsButton, styles.savedCheckinsButtonEmpty]}
+              onPress={onShowSavedCheckins}
+            >
+              <Text style={styles.savedCheckinsButtonEmptyText}>
                 View Saved Check-ins
               </Text>
             </TouchableOpacity>
@@ -180,14 +223,22 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   savedCheckinsButton: {
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
+    backgroundColor: '#2563EB',
     borderRadius: 8,
     padding: 12,
     alignItems: 'center',
   },
   savedCheckinsButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  savedCheckinsButtonEmpty: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  savedCheckinsButtonEmptyText: {
     color: '#1F2937',
     fontSize: 16,
     fontWeight: '500',
