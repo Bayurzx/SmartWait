@@ -145,9 +145,15 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
   };
 
   const renderSavedCheckinsSection = () => {
-    if (!onShowSavedCheckins) return null;
+    console.log('renderSavedCheckinsSection called - onShowSavedCheckins:', !!onShowSavedCheckins, 'loadingSavedCheckins:', loadingSavedCheckins, 'savedCheckinsCount:', savedCheckinsCount);
+
+    if (!onShowSavedCheckins) {
+      console.log('Returning null - no onShowSavedCheckins prop');
+      return null;
+    }
 
     if (loadingSavedCheckins) {
+      console.log('Showing loading state');
       return (
         <View style={styles.savedCheckinsSection}>
           <View style={styles.loadingRow}>
@@ -157,8 +163,9 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
         </View>
       );
     }
-    console.log('CheckInScreen render - savedCheckinsCount:', savedCheckinsCount, 'onShowSavedCheckins:', !!onShowSavedCheckins);
+
     if (savedCheckinsCount > 0) {
+      console.log('Showing saved check-ins button for count:', savedCheckinsCount);
       return (
         <View style={styles.savedCheckinsSection}>
           <Text style={styles.sectionTitle}>Previous Check-ins</Text>
@@ -181,6 +188,7 @@ export const CheckInScreen: React.FC<CheckInScreenProps> = ({
       );
     }
 
+    console.log('Showing empty state');
     return (
       <View style={styles.savedCheckinsSection}>
         <Text style={styles.sectionTitle}>Previous Check-ins</Text>
