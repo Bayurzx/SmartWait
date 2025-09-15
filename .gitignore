@@ -106,7 +106,6 @@ logs
 *.db
 
 # Docker
-.dockerignore
 
 # Expo
 .expo/

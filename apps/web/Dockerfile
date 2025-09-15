@@ -14,7 +14,7 @@ RUN addgroup -g 1001 -S nodejs && \
 
 WORKDIR /app
 
-# Copy package files and config - FIXED PATHS
+# Copy package files and config
 COPY package*.json ./
 COPY next.config.js ./
 COPY tailwind.config.js ./
@@ -30,10 +30,7 @@ RUN npm install --only=production --legacy-peer-deps && npm cache clean --force
 
 # Build stage
 FROM base AS build
-# Copy source code - ensure proper structure
-COPY src/ ./src/
-COPY public/ ./public/
-# Copy additional config files that might be needed
+# Copy all source files (excluding what's in .dockerignore)
 COPY . .
 
 # Set correct permissions and install/build
@@ -44,10 +41,9 @@ RUN chown -R smartwait:nodejs /app && \
 # Production stage
 FROM base AS production
 
-# Copy built application - FIXED PATHS for standalone output
+# Copy built application from standalone output
 COPY --from=build --chown=smartwait:nodejs /app/.next/standalone ./
 COPY --from=build --chown=smartwait:nodejs /app/.next/static ./.next/static
-COPY --from=build --chown=smartwait:nodejs /app/public ./public
 
 # Create necessary directories
 RUN mkdir -p /var/log/smartwait && \
