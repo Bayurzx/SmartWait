@@ -35,6 +35,7 @@ class CheckinHistoryService {
   private getOrCreateDeviceId(): string {
     const storageKey = 'smartwait_device_id';
     
+    if (typeof window === 'undefined') return this.generateDeviceId();
     try {
       let deviceId = localStorage.getItem(storageKey);
       
