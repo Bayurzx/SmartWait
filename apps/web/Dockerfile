@@ -23,12 +23,12 @@ COPY tsconfig.json ./
 
 # Dependencies stage
 FROM base AS dependencies
-RUN npm ci --only=production --legacy-peer-deps && npm cache clean --force
+RUN npm install --only=production --legacy-peer-deps && npm cache clean --force
 
 # Build stage
 FROM base AS build
 COPY . .
-RUN npm ci --legacy-peer-deps && \
+RUN npm install --legacy-peer-deps && \
     npm run build
 
 # Production stage
