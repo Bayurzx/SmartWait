@@ -6,8 +6,8 @@ RUN apk update && apk upgrade && \
     apk add --no-cache \
     curl \
     dumb-init \
-    openssl \  # ← ADDED: Required for Prisma
-    && rm -rf /var/cache/apk/*
+    openssl && \
+    rm -rf /var/cache/apk/*
 
 # Create app directory and user
 RUN addgroup -g 1001 -S nodejs && \
