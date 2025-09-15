@@ -1,3 +1,4 @@
+// apps\api\src\__tests__\integration\test-runner.ts
 /**
  * Integration Test Suite Runner
  * Orchestrates all integration tests and provides comprehensive reporting
@@ -346,7 +347,7 @@ export class IntegrationTestRunner {
       if (!callResult.success) return false;
 
       // Complete patient
-      await this.queueService.markPatientCompleted(callResult.patient!.patientId);
+      await this.queueService.markPatientCompleted(callResult.patient!.id);
 
       return true;
     } catch (error) {

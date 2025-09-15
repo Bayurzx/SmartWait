@@ -1,3 +1,4 @@
+// apps\api\src\services\queue-service.ts
 import { prisma } from '../config/database';
 import { 
   CheckInRequest, 
@@ -768,6 +769,49 @@ export class QueueService {
     }
   }
 
+  /**
+ * Add these methods to your QueueService class
+ * These are the missing methods referenced in your test files
+ */
+
+  /**
+   * Clear all queue entries - useful for testing
+   */
+  async clearQueue(): Promise<void> {
+    try {
+      await prisma.queuePosition.deleteMany({});
+      await prisma.patient.deleteMany({});
+      console.log('✅ Queue cleared successfully');
+    } catch (error) {
+      console.error('❌ Failed to clear queue:', error);
+      throw new Error('Failed to clear queue');
+    }
+  }
+
+  /**
+   * Health check for the queue service
+   */
+  async healthCheck(): Promise<{ healthy: boolean; message?: string }> {
+    try {
+      // Test database connection
+      await prisma.$queryRaw`SELECT 1`;
+
+      // Test basic operations
+      const queueCount = await prisma.queuePosition.count();
+
+      return {
+        healthy: true,
+        message: `Queue service healthy. Current queue size: ${queueCount}`
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return {
+        healthy: false,
+        message: `Database connection failed: ${errorMessage}`
+      };
+    }
+  }
+  
   /**
    * Check if a patient has received a "get ready" notification recently
    * This prevents duplicate notifications when queue positions change

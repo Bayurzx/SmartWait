@@ -74,7 +74,7 @@ describe('SMS Notifications Integration', () => {
       expect(mockTwilio.messages.create).toHaveBeenCalledWith(
         expect.objectContaining({
           to: '+1234567890',
-          body: expect.stringContaining('John Doe'),
+          // body: expect.stringContaining('John Doe'),
           body: expect.stringContaining('position 1')
         })
       );
@@ -234,7 +234,7 @@ describe('SMS Notifications Integration', () => {
       expect(mockTwilio.messages.create).toHaveBeenCalledWith(
         expect.objectContaining({
           to: '+1234567890',
-          body: expect.stringContaining('John Doe'),
+          // body: expect.stringContaining('John Doe'),
           body: expect.stringMatching(/turn|now|come/i)
         })
       );

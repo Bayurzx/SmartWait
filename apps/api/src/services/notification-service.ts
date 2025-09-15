@@ -529,6 +529,72 @@ export class NotificationService {
   }
 
   /**
+ * Health check for the notification service
+ */
+  async healthCheck(): Promise<{ healthy: boolean; message?: string }> {
+    try {
+      // Test Twilio connection (or your SMS provider)
+      if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+        return {
+          healthy: false,
+          message: 'SMS credentials not configured'
+        };
+      }
+
+      // You could test the Twilio client here if needed
+      // const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+      // await twilioClient.api.accounts(process.env.TWILIO_ACCOUNT_SID).fetch();
+
+      return {
+        healthy: true,
+        message: 'Notification service healthy'
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return {
+        healthy: false,
+        message: `Notification service error: ${errorMessage}`
+      };
+    }
+  }
+
+  /**
+   * Get notification statistics
+   */
+  async getNotificationStats(): Promise<{
+    totalSent: number;
+    totalFailed: number;
+    successRate: number;
+  }> {
+    try {
+      const [totalSent, totalFailed] = await Promise.all([
+        prisma.smsNotification.count({
+          where: { status: 'sent' }
+        }),
+        prisma.smsNotification.count({
+          where: { status: 'failed' }
+        })
+      ]);
+
+      const successRate = totalSent + totalFailed > 0
+        ? (totalSent / (totalSent + totalFailed)) * 100
+        : 100;
+
+      return {
+        totalSent,
+        totalFailed,
+        successRate: Math.round(successRate * 100) / 100
+      };
+    } catch (error) {
+      console.error('Failed to get notification stats:', error);
+      return {
+        totalSent: 0,
+        totalFailed: 0,
+        successRate: 0
+      };
+    }
+  }
+  /**
    * Get SMS delivery statistics for monitoring
    * @param hours - Number of hours to look back (default: 24)
    * @returns Promise with delivery statistics

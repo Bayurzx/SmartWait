@@ -82,7 +82,7 @@ class WebSocketAuthTester {
         throw new Error('Failed to get staff authentication token');
       }
 
-      const token = authResult.data.sessionToken;
+      const token = authResult.data.token;
 
       // Connect with staff token
       const socket = Client(API_URL, {
@@ -119,7 +119,7 @@ class WebSocketAuthTester {
       this.addResult(testName, true, 'Staff authentication successful', Date.now() - startTime);
 
     } catch (error) {
-      this.addResult(testName, false, `Staff authentication failed: ${error.message}`, Date.now() - startTime);
+      this.addResult(testName, false, `Staff authentication failed: ${this.getErrorMessage(error)}`, Date.now() - startTime);
     }
   }
 
@@ -168,7 +168,7 @@ class WebSocketAuthTester {
       this.addResult(testName, true, 'Patient authentication successful', Date.now() - startTime);
 
     } catch (error) {
-      this.addResult(testName, false, `Patient authentication failed: ${error.message}`, Date.now() - startTime);
+      this.addResult(testName, false, `Patient authentication failed: ${this.getErrorMessage(error)}`, Date.now() - startTime);
     }
   }
 
@@ -213,7 +213,7 @@ class WebSocketAuthTester {
       this.addResult(testName, true, 'Unauthenticated connections properly rejected', Date.now() - startTime);
 
     } catch (error) {
-      this.addResult(testName, false, `Rejection test failed: ${error.message}`, Date.now() - startTime);
+      this.addResult(testName, false, `Rejection test failed: ${this.getErrorMessage(error)}`, Date.now() - startTime);
     }
   }
 
@@ -227,7 +227,7 @@ class WebSocketAuthTester {
     try {
       // Get staff token
       const authResult = await this.authService.authenticateStaff('staff', 'password123');
-      const staffToken = authResult.data?.sessionToken;
+      const staffToken = authResult.data?.token;
 
       if (!staffToken) {
         throw new Error('Failed to get staff token');
@@ -320,7 +320,7 @@ class WebSocketAuthTester {
       this.addResult(testName, true, 'Room permissions working correctly', Date.now() - startTime);
 
     } catch (error) {
-      this.addResult(testName, false, `Room permissions test failed: ${error.message}`, Date.now() - startTime);
+      this.addResult(testName, false, `Room permissions test failed: ${this.getErrorMessage(error)}`, Date.now() - startTime);
     }
   }
 
@@ -390,7 +390,7 @@ class WebSocketAuthTester {
       this.addResult(testName, true, 'Room management operations successful', Date.now() - startTime);
 
     } catch (error) {
-      this.addResult(testName, false, `Room management test failed: ${error.message}`, Date.now() - startTime);
+      this.addResult(testName, false, `Room management test failed: ${this.getErrorMessage(error)}`, Date.now() - startTime);
     }
   }
 
@@ -443,7 +443,7 @@ class WebSocketAuthTester {
       this.addResult(testName, true, 'Connection tracking successful', Date.now() - startTime);
 
     } catch (error) {
-      this.addResult(testName, false, `Connection tracking test failed: ${error.message}`, Date.now() - startTime);
+      this.addResult(testName, false, `Connection tracking test failed: ${this.getErrorMessage(error)}`, Date.now() - startTime);
     }
   }
 
@@ -489,7 +489,20 @@ class WebSocketAuthTester {
       this.addResult(testName, true, 'Invalid tokens properly rejected', Date.now() - startTime);
 
     } catch (error) {
-      this.addResult(testName, false, `Invalid token test failed: ${error.message}`, Date.now() - startTime);
+      this.addResult(testName, false, `Invalid token test failed: ${this.getErrorMessage(error)}`, Date.now() - startTime);
+    }
+  }
+
+  /**
+   * Safely extract error message from unknown error type
+   */
+  private getErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    } else if (typeof error === 'string') {
+      return error;
+    } else {
+      return 'Unknown error occurred';
     }
   }
 
