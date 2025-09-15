@@ -25,7 +25,7 @@ RUN npm install --only=production --legacy-peer-deps && npm cache clean --force
 
 # Build stage
 FROM base AS build
-COPY . .
+COPY --chown=smartwait:nodejs . .
 RUN npm install --legacy-peer-deps && \
     npx prisma generate && \
     npm run build && \

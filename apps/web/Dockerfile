@@ -14,12 +14,15 @@ RUN addgroup -g 1001 -S nodejs && \
 
 WORKDIR /app
 
-# Copy package files and config
+# Copy package files and config - FIXED PATHS
 COPY package*.json ./
-COPY next.config.js* ./
-COPY tailwind.config.js* ./
-COPY postcss.config.js* ./
+COPY next.config.js ./
+COPY tailwind.config.js ./
+COPY postcss.config.js ./
 COPY tsconfig.json ./
+COPY jest.config.js ./
+COPY jest.setup.js ./
+COPY next-env.d.ts ./
 
 # Dependencies stage
 FROM base AS dependencies
@@ -27,14 +30,21 @@ RUN npm install --only=production --legacy-peer-deps && npm cache clean --force
 
 # Build stage
 FROM base AS build
+# Copy source code - ensure proper structure
+COPY src/ ./src/
+COPY public/ ./public/
+# Copy additional config files that might be needed
 COPY . .
-RUN npm install --legacy-peer-deps && \
+
+# Set correct permissions and install/build
+RUN chown -R smartwait:nodejs /app && \
+    npm install --legacy-peer-deps && \
     npm run build
 
 # Production stage
 FROM base AS production
 
-# Copy built application
+# Copy built application - FIXED PATHS for standalone output
 COPY --from=build --chown=smartwait:nodejs /app/.next/standalone ./
 COPY --from=build --chown=smartwait:nodejs /app/.next/static ./.next/static
 COPY --from=build --chown=smartwait:nodejs /app/public ./public
