@@ -1,17 +1,26 @@
 // apps\api\tsconfig.json
 {
-  "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": [
+      "ES2020"
+    ],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "noEmit": false,
     "baseUrl": ".",
-    "target": "ES2015",
-    "module": "commonjs",
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "downlevelIteration": true,
-    "strict": true,
     "paths": {
       "@/*": [
         "./src/*"
